@@ -1,3 +1,263 @@
+# Multi-LLM Decision Chain
+
+## Overview
+
+Grok Doc's advanced mode uses a **4-stage LLM decision chain** where each model plays a specialized role in clinical reasoning. This approach provides more robust, defensible recommendations by explicitly modeling different aspects of clinical decision-making.
+
+## Architecture
+
+```
+Input: Clinical Question
+         ↓
+    ┌────────────────────┐
+    │  LLM #1: Kinetics  │
+    │  Pharmacokinetics  │
+    │  Initial Dosing    │
+    └──────┬─────────────┘
+           │ [Hash Chain Link]
+           ↓
+    ┌────────────────────┐
+    │ LLM #2: Adversarial│
+    │ Risk Analysis      │
+    │ Edge Cases         │
+    └──────┬─────────────┘
+           │ [Hash Chain Link]
+           ↓
+    ┌────────────────────┐
+    │ LLM #3: Literature │
+    │ Evidence-Based     │
+    │ Recent Studies     │
+    └──────┬─────────────┘
+           │ [Hash Chain Link]
+           ↓
+    ┌────────────────────┐
+    │  LLM #4: Arbiter   │
+    │  Reconciliation    │
+    │  Final Decision    │
+    └──────┬─────────────┘
+           ↓
+    Final Recommendation
+    + Cryptographic Chain Hash
+```
+
+## The Four Models
+
+### 1. Kinetics Model (Pharmacologist)
+
+**Role:** Calculate raw pharmacokinetics and initial dosing recommendation
+
+**Prompt Strategy:**
+- Focus purely on PK/PD calculations
+- Use Bayesian priors from similar cases
+- Provide initial dose with probability estimate
+
+**Example Output:**
+> "1.4 mg/kg propofol recommended, 78% safe based on 17k prior cases with similar renal function"
+
+### 2. Adversarial Model (Devil's Advocate)
+
+**Role:** Challenge the initial recommendation and find edge cases
+
+**Prompt Strategy:**
+- Act as paranoid, risk-averse clinician
+- Identify drug interactions
+- Flag comorbidities that increase risk
+- Find contraindications
+
+**Example Output:**
+> "Risk of bradycardia 0.6% baseline, but if patient is on beta-blockers, risk jumps to 4.2%. Check current medications."
+
+### 3. Literature Model (Evidence Researcher)
+
+**Role:** Provide evidence-based guidance from recent studies
+
+**Prompt Strategy:**
+- Reference 2023-2025 clinical literature
+- Cite specific studies and institutions
+- Offer evidence-based alternatives
+- Suggest monitoring parameters
+
+**Example Output:**
+> "Cleveland Clinic 2025 study (n=2,847): 1.2 mg/kg safer in beta-blocked patients. Recommend dose reduction with continuous ECG monitoring."
+
+### 4. Arbiter Model (Attending Physician)
+
+**Role:** Synthesize all inputs into final clinical decision
+
+**Prompt Strategy:**
+- Reconcile conflicts between models
+- Provide single, clear recommendation
+- State final confidence level
+- Note key monitoring
+
+**Example Output:**
+> "Recommendation: 1.2 mg/kg propofol (reduced from initial 1.4). Safety: 99.2% confident. Rationale: Literature supports dose reduction in beta-blocked patients. Monitor: Continuous ECG, BP q5min × 30min."
+
+## Cryptographic Chain
+
+Each step is cryptographically linked:
+
+```python
+step_hash = SHA256(
+    step_name +
+    prompt +
+    response +
+    prev_hash
+)
+```
+
+This creates a tamper-evident chain where:
+- Any modification breaks the chain
+- Full reasoning path is auditable
+- Each step is independently verifiable
+
+## Usage
+
+### Enable in UI
+
+In the Streamlit app sidebar:
+1. Expand "Advanced Settings"
+2. Check "Enable Multi-LLM Chain"
+3. Run analysis
+
+### Programmatic Usage
+
+```python
+from llm_chain import run_multi_llm_decision
+
+result = run_multi_llm_decision(
+    patient_context={
+        'age': 72,
+        'gender': 'Male',
+        'labs': 'Cr 1.8, Vanc trough 18.3'
+    },
+    query="Is this vancomycin trough safe?",
+    retrieved_cases=cases,
+    bayesian_result=bayesian_prob
+)
+
+print(result['final_recommendation'])
+print(f"Chain verified: {result['chain_export']['chain_verified']}")
+```
+
+## Performance
+
+**Single LLM Mode (v1.0):**
+- Inference time: ~2-3 seconds
+- Single reasoning path
+- Good for routine cases
+
+**Multi-LLM Chain Mode (v2.0):**
+- Inference time: ~10-15 seconds
+- 4 specialized reasoning paths
+- Better for complex/high-risk cases
+- Full audit trail of reasoning
+
+## Clinical Benefits
+
+### 1. Robust Decision-Making
+Different models catch different issues:
+- Kinetics: Dosing calculations
+- Adversarial: Hidden risks
+- Literature: Evidence-based best practices
+- Arbiter: Holistic synthesis
+
+### 2. Explainable AI
+Full reasoning chain visible:
+- "Why did you recommend this dose?"
+- "What risks were considered?"
+- "What evidence supports this?"
+
+### 3. Legal Defensibility
+Cryptographically verified chain shows:
+- Multiple expert perspectives considered
+- Evidence-based reasoning
+- Risk analysis performed
+- Final decision reconciled all inputs
+
+### 4. Quality Assurance
+Adversarial model acts as built-in peer review:
+- Catches edge cases
+- Identifies contraindications
+- Reduces cognitive biases
+
+## When to Use
+
+### Use Multi-LLM Chain For:
+- ✅ High-risk medications (sedatives, anticoagulants)
+- ✅ Complex patients (multiple comorbidities)
+- ✅ Unfamiliar scenarios
+- ✅ Cases requiring legal documentation
+- ✅ Teaching/training scenarios
+
+### Use Single LLM For:
+- ✅ Routine cases
+- ✅ Time-critical decisions
+- ✅ Well-established protocols
+- ✅ When speed is prioritized
+
+## Configuration
+
+Adjust chain behavior in `llm_chain.py`:
+
+```python
+# Token limits for each model
+KINETICS_MAX_TOKENS = 200    # Concise PK calculation
+ADVERSARIAL_MAX_TOKENS = 250  # Risk enumeration
+LITERATURE_MAX_TOKENS = 300   # Evidence summary
+ARBITER_MAX_TOKENS = 300      # Final decision
+
+# Temperature (deterministic for medical use)
+TEMPERATURE = 0.0
+```
+
+## Research & Validation
+
+This approach is based on:
+- **Ensemble Methods:** Multiple models reduce individual biases
+- **Red Team / Blue Team:** Adversarial analysis catches errors
+- **Expert Systems:** Each model has specialized role
+- **Chain-of-Thought:** Explicit reasoning steps improve accuracy
+
+**Validation Studies (In Progress):**
+- Comparing single vs. chain accuracy
+- Inter-rater reliability with human physicians
+- Error detection rate of adversarial model
+- Clinical outcomes in pilot hospitals
+
+## Future Enhancements
+
+### v2.1 Features
+- [ ] Configurable number of chain steps
+- [ ] Domain-specific models (surgery, cardiology, etc.)
+- [ ] Real-time literature search via PubMed API
+- [ ] Confidence calibration across chain
+- [ ] Automated conflict resolution
+
+### v3.0 Features
+- [ ] Zero-knowledge proofs of chain execution
+- [ ] Distributed consensus across hospitals
+- [ ] Federated learning from chain outcomes
+- [ ] Real-time model updates based on new evidence
+
+## Citation
+
+If using the multi-LLM chain in research:
+
+```bibtex
+@software{grok_doc_chain_2025,
+  author = {Silvestri, Dino},
+  title = {Grok Doc: Multi-LLM Decision Chain for Clinical AI},
+  year = {2025},
+  url = {https://github.com/bufirstrepo/Grok_doc_revision}
+}
+```
+
+## Questions?
+
+- GitHub Issues: [Report bugs or request features](https://github.com/bufirstrepo/Grok_doc_revision/issues)
+- Twitter: [@ohio_dino](https://x.com/ohio_dino)
+- Email find me on social media
 # 🩺 Grok Doc - On-Premises Clinical AI Co-Pilot
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
