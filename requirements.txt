@@ -1,0 +1,12 @@
+streamlit
+vllm
+torch
+transformers
+sentence-transformers
+faiss-gpu
+pymc
+arviz
+numpy
+pandas
+requests
+sqlite3

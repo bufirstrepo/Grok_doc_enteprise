@@ -1,206 +1,202 @@
 #!/bin/bash
-# Grok Doc v2.0 Launch Script
-# Automates testing, committing, and deploying v2.0
+#
+# Grok Doc v2.0 - Automated Launch Script
+#
+# This script automatically:
+# 1. Checks system requirements
+# 2. Loads the LLM model
+# 3. Generates case database if needed
+# 4. Launches the Streamlit UI
+#
+# Usage:
+#   ./launch_v2.sh                    # Launch with default settings
+#   ./launch_v2.sh --port 8080        # Launch on custom port
+#   ./launch_v2.sh --no-wifi-check    # Disable WiFi verification (dev mode)
+#
 
 set -e  # Exit on error
 
-# Colors
-RED='\033[0;31m'
+# ── CONFIGURATION ─────────────────────────────────────────────────
+DEFAULT_PORT=8501
+MODEL_PATH="${GROK_MODEL_PATH:-/models/llama-3.1-70b-instruct-awq}"
+MIN_VRAM_GB=80
+CASE_INDEX="case_index.faiss"
+CASES_FILE="cases_17k.jsonl"
+
+# ── COLOR OUTPUT ───────────────────────────────────────────────────
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
+RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}════════════════════════════════════════════════${NC}"
-echo -e "${BLUE}  Grok Doc v2.0 Launch Script${NC}"
-echo -e "${BLUE}  Multi-LLM Decision Chain Release${NC}"
-echo -e "${BLUE}════════════════════════════════════════════════${NC}"
-echo ""
+info() {
+    echo -e "${GREEN}[INFO]${NC} $1"
+}
 
-# Check we're in the right directory
-if [ ! -f "app.py" ]; then
-    echo -e "${RED}✗ Error: app.py not found. Run this from the repo root.${NC}"
+warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+error() {
+    echo -e "${RED}[ERROR]${NC} $1"
     exit 1
-fi
+}
 
-echo -e "${GREEN}✓ Repository root detected${NC}"
+# ── PARSE ARGUMENTS ───────────────────────────────────────────────
+PORT=$DEFAULT_PORT
+NO_WIFI_CHECK=false
 
-# Step 1: Verify required files exist
-echo ""
-echo -e "${YELLOW}Step 1: Verifying v2.0 files...${NC}"
-
-REQUIRED_FILES=(
-    "llm_chain.py"
-    "MULTI_LLM_CHAIN.md"
-    "test_v2.py"
-    "app.py"
-    "README.md"
-    "CHANGELOG.md"
-)
-
-MISSING_FILES=0
-for file in "${REQUIRED_FILES[@]}"; do
-    if [ -f "$file" ]; then
-        echo -e "${GREEN}  ✓ $file${NC}"
-    else
-        echo -e "${RED}  ✗ MISSING: $file${NC}"
-        MISSING_FILES=$((MISSING_FILES + 1))
-    fi
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --port)
+            PORT="$2"
+            shift 2
+            ;;
+        --no-wifi-check)
+            NO_WIFI_CHECK=true
+            shift
+            ;;
+        --help)
+            echo "Grok Doc v2.0 Launch Script"
+            echo ""
+            echo "Usage: ./launch_v2.sh [OPTIONS]"
+            echo ""
+            echo "Options:"
+            echo "  --port PORT          Set Streamlit port (default: 8501)"
+            echo "  --no-wifi-check      Disable hospital WiFi verification (dev only)"
+            echo "  --help               Show this help message"
+            echo ""
+            echo "Environment Variables:"
+            echo "  GROK_MODEL_PATH      Path to LLM model (default: /models/llama-3.1-70b-instruct-awq)"
+            exit 0
+            ;;
+        *)
+            error "Unknown option: $1. Use --help for usage."
+            ;;
+    esac
 done
 
-if [ $MISSING_FILES -gt 0 ]; then
-    echo -e "${RED}✗ Missing $MISSING_FILES file(s). Create them before launching.${NC}"
-    exit 1
+# ── HEADER ────────────────────────────────────────────────────────
+echo ""
+echo "╔════════════════════════════════════════════════════════════╗"
+echo "║                                                            ║"
+echo "║           🩺  Grok Doc v2.0 Launch Script                 ║"
+echo "║                                                            ║"
+echo "║  Multi-LLM Clinical AI • On-Premises • HIPAA-Compliant   ║"
+echo "║                                                            ║"
+echo "╚════════════════════════════════════════════════════════════╝"
+echo ""
+
+# ── SYSTEM CHECKS ─────────────────────────────────────────────────
+info "Running system checks..."
+
+# Check Python version
+if ! command -v python3 &> /dev/null; then
+    error "Python 3 is not installed. Please install Python 3.9+"
 fi
 
-echo -e "${GREEN}✓ All required files present${NC}"
+PYTHON_VERSION=$(python3 --version | cut -d' ' -f2 | cut -d'.' -f1,2)
+REQUIRED_VERSION="3.9"
+if [ "$(printf '%s\n' "$REQUIRED_VERSION" "$PYTHON_VERSION" | sort -V | head -n1)" != "$REQUIRED_VERSION" ]; then
+    error "Python $REQUIRED_VERSION+ required. Found: $PYTHON_VERSION"
+fi
 
-# Step 2: Run tests
-echo ""
-echo -e "${YELLOW}Step 2: Running test suite...${NC}"
+info "✓ Python $PYTHON_VERSION found"
 
-if python test_v2.py; then
-    echo -e "${GREEN}✓ All tests passed${NC}"
+# Check GPU availability
+if ! command -v nvidia-smi &> /dev/null; then
+    warn "nvidia-smi not found. GPU inference may not be available."
 else
-    echo -e "${RED}✗ Tests failed. Fix errors before launching.${NC}"
-    exit 1
+    GPU_COUNT=$(nvidia-smi --list-gpus | wc -l)
+    TOTAL_VRAM=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | awk '{sum+=$1} END {print sum/1024}')
+
+    info "✓ Found $GPU_COUNT GPU(s) with ${TOTAL_VRAM}GB total VRAM"
+
+    if (( $(echo "$TOTAL_VRAM < $MIN_VRAM_GB" | bc -l) )); then
+        warn "Recommended VRAM: ${MIN_VRAM_GB}GB+. You have: ${TOTAL_VRAM}GB."
+        warn "Consider using a smaller model (e.g., Llama-3.1-8B)"
+    fi
 fi
 
-# Step 3: Check git status
-echo ""
-echo -e "${YELLOW}Step 3: Checking git status...${NC}"
-
-if ! git diff --quiet; then
-    echo -e "${YELLOW}  ⚠ Uncommitted changes detected${NC}"
-    git status --short
+# Check if model exists
+if [ ! -d "$MODEL_PATH" ]; then
+    warn "Model not found at $MODEL_PATH"
+    warn "Please download the model first:"
+    echo ""
+    echo "    huggingface-cli download meta-llama/Meta-Llama-3.1-70B-Instruct-AWQ \\"
+    echo "      --local-dir $MODEL_PATH"
+    echo ""
+    read -p "Continue anyway? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
 else
-    echo -e "${GREEN}  ✓ No uncommitted changes${NC}"
+    info "✓ Model found at $MODEL_PATH"
 fi
 
-# Step 4: Confirm launch
-echo ""
-echo -e "${YELLOW}════════════════════════════════════════════════${NC}"
-echo -e "${YELLOW}Ready to launch v2.0?${NC}"
-echo -e "${YELLOW}════════════════════════════════════════════════${NC}"
-echo ""
-echo "This will:"
-echo "  1. Stage all v2.0 files"
-echo "  2. Commit with detailed message"
-echo "  3. Tag as v2.0.0"
-echo "  4. Push to GitHub"
-echo ""
-read -p "Continue? (y/n) " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo -e "${YELLOW}Launch cancelled${NC}"
-    exit 0
+# Check dependencies
+info "Checking Python dependencies..."
+if ! python3 -c "import streamlit" &> /dev/null; then
+    warn "Streamlit not installed. Installing dependencies..."
+    pip install -r requirements.txt
 fi
 
-# Step 5: Stage files
+info "✓ Dependencies OK"
+
+# ── GENERATE CASE DATABASE ───────────────────────────────────────
+if [ ! -f "$CASE_INDEX" ] || [ ! -f "$CASES_FILE" ]; then
+    warn "Case database not found. Generating sample database..."
+    info "This may take 2-3 minutes..."
+
+    python3 data_builder.py
+
+    if [ $? -eq 0 ]; then
+        info "✓ Case database generated"
+    else
+        error "Failed to generate case database"
+    fi
+else
+    info "✓ Case database found ($CASES_FILE)"
+fi
+
+# ── WIFI CHECK CONFIGURATION ──────────────────────────────────────
+if [ "$NO_WIFI_CHECK" = true ]; then
+    warn "WiFi check DISABLED (development mode)"
+    warn "⚠️  DO NOT use in production - PHI protection disabled!"
+    export REQUIRE_WIFI_CHECK=false
+else
+    info "Hospital WiFi verification enabled"
+fi
+
+# ── LAUNCH STREAMLIT ──────────────────────────────────────────────
+info "Starting Grok Doc v2.0 on port $PORT..."
 echo ""
-echo -e "${YELLOW}Step 4: Staging files...${NC}"
-
-git add llm_chain.py
-git add MULTI_LLM_CHAIN.md
-git add test_v2.py
-git add DEPLOY_V2.md 2>/dev/null || echo "  (DEPLOY_V2.md not found, skipping)"
-git add app.py
-git add README.md
-git add CHANGELOG.md
-
-echo -e "${GREEN}✓ Files staged${NC}"
-
-# Step 6: Commit
+echo "╔════════════════════════════════════════════════════════════╗"
+echo "║                                                            ║"
+echo "║  🚀 Grok Doc v2.0 is starting...                          ║"
+echo "║                                                            ║"
+echo "║  Access at: http://localhost:$PORT                       ║"
+echo "║                                                            ║"
+echo "║  Features:                                                ║"
+echo "║    • ⚡ Fast Mode (v1.0) - Single LLM (~2s)               ║"
+echo "║    • 🔗 Chain Mode (v2.0) - Multi-LLM chain (~8s)         ║"
+echo "║                                                            ║"
+echo "║  Press Ctrl+C to stop                                     ║"
+echo "║                                                            ║"
+echo "╚════════════════════════════════════════════════════════════╝"
 echo ""
-echo -e "${YELLOW}Step 5: Committing v2.0...${NC}"
 
-git commit -m "Release v2.0: Multi-LLM Decision Chain
+# Export model path for app
+export GROK_MODEL_PATH="$MODEL_PATH"
 
-Major Features:
-- 4-stage LLM reasoning chain (Kinetics → Adversarial → Literature → Arbiter)
-- Cryptographic verification of complete reasoning chain
-- Toggle between Fast Mode (v1.0) and Chain Mode (v2.0)
-- Enhanced UI with chain breakdown and verification
-- Complete technical documentation
+# Launch Streamlit
+streamlit run app.py \
+    --server.port=$PORT \
+    --server.address=0.0.0.0 \
+    --server.headless=true \
+    --browser.serverAddress=localhost \
+    --browser.gatherUsageStats=false
 
-Technical Changes:
-- Added llm_chain.py: Core multi-LLM orchestrator
-- Updated app.py: v2.0 UI with mode toggle
-- Enhanced audit logging with chain metadata
-- Comprehensive test suite
-
-Documentation:
-- MULTI_LLM_CHAIN.md: Technical architecture
-- Updated README.md: v2.0 features and usage
-- CHANGELOG.md: Complete version history
-- Test suite with 4 verification tests
-
-This is the core innovation that makes Grok Doc legally defensible 
-and clinically robust through transparent, multi-model reasoning."
-
-echo -e "${GREEN}✓ Committed${NC}"
-
-# Step 7: Tag
-echo ""
-echo -e "${YELLOW}Step 6: Creating v2.0.0 tag...${NC}"
-
-git tag -a v2.0.0 -m "Multi-LLM Decision Chain Release
-
-Major Features:
-- 4-stage specialized LLM chain
-- Adversarial risk analysis
-- Evidence-based synthesis
-- Cryptographic verification
-
-See CHANGELOG.md for complete details."
-
-echo -e "${GREEN}✓ Tagged as v2.0.0${NC}"
-
-# Step 8: Push
-echo ""
-echo -e "${YELLOW}Step 7: Pushing to GitHub...${NC}"
-
-git push origin main
-git push origin --tags
-
-echo -e "${GREEN}✓ Pushed to GitHub${NC}"
-
-# Step 9: Summary
-echo ""
-echo -e "${GREEN}════════════════════════════════════════════════${NC}"
-echo -e "${GREEN}  ✅ v2.0 Successfully Launched!${NC}"
-echo -e "${GREEN}════════════════════════════════════════════════${NC}"
-echo ""
-echo "Next steps:"
-echo ""
-echo "1. Create GitHub Release:"
-echo "   https://github.com/bufirstrepo/Grok_doc_revision/releases/new"
-echo "   - Tag: v2.0.0"
-echo "   - Title: Grok Doc v2.0 - Multi-LLM Decision Chain"
-echo ""
-echo "2. Record demo video showing:"
-echo "   - Fast Mode (v1.0)"
-echo "   - Chain Mode (v2.0) with all 4 steps"
-echo "   - Chain verification"
-echo ""
-echo "3. Tweet the announcement:"
-echo "   🚀 Grok Doc v2.0 is LIVE"
-echo "   "
-echo "   Introducing the Multi-LLM Decision Chain:"
-echo "   • 4 specialized models analyze every decision"
-echo "   • Kinetics → Adversarial → Literature → Arbiter"
-echo "   • Cryptographically verified reasoning trail"
-echo "   "
-echo "   github.com/bufirstrepo/Grok_doc_revision"
-echo "   "
-echo "   @elonmusk @xai"
-echo ""
-echo "4. Verify deployment:"
-echo "   - Visit: https://github.com/bufirstrepo/Grok_doc_revision"
-echo "   - Check all files are visible"
-echo "   - Verify README displays correctly"
-echo "   - Test fresh clone works"
-echo ""
-echo -e "${BLUE}════════════════════════════════════════════════${NC}"
-echo -e "${BLUE}  Congratulations on shipping v2.0! 🎉${NC}"
-echo -e "${BLUE}════════════════════════════════════════════════${NC}"
+# ── CLEANUP ───────────────────────────────────────────────────────
+info "Grok Doc v2.0 stopped"

@@ -1,0 +1,92 @@
+# MIT License with Clinical/Commercial Use Restriction
+
+Copyright (c) 2025 Dino Silvestri (@ohio_dino)
+
+## Permissions
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to use, copy, modify, merge, and distribute the Software for **non-commercial, academic, research, and personal purposes**, subject to the following conditions:
+
+## Restrictions
+
+**Clinical and Commercial Use Restriction:**
+
+1. **Clinical Deployment:** Any deployment of this Software in a clinical setting (hospitals, clinics, medical practices, or any healthcare facility providing patient care) requires prior written authorization from the copyright holder.
+
+2. **Commercial Use:** Any use of this Software for commercial purposes, including but not limited to:
+   - Selling or licensing the Software
+   - Offering Software-as-a-Service (SaaS) based on this Software
+   - Integrating into proprietary commercial products
+   - Using in revenue-generating clinical operations
+   
+   requires prior written authorization and a separate commercial license agreement.
+
+3. **Modifications:** Derivative works intended for clinical or commercial use are subject to the same restrictions as the original Software.
+
+## Permitted Use
+
+The following uses are **explicitly permitted without additional authorization**:
+
+- Academic research and publication
+- Educational purposes in universities and training programs
+- Personal learning and experimentation
+- Open-source development and contribution
+- Internal hospital testing and evaluation (non-patient-facing)
+- Clinical validation studies (with IRB approval)
+
+## Authorization Process
+
+To obtain authorization for clinical deployment or commercial use:
+
+1. Contact: Dino Silvestri via Twitter [@ohio_dino](https://twitter.com/ohio_dino)
+2. Provide: Intended use case, institution/company details, deployment scale
+3. Negotiate: Licensing terms, support agreements, liability provisions
+
+## Standard MIT Conditions
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+## Medical Disclaimer
+
+**IMPORTANT: This Software is a clinical decision support tool, not a medical device.**
+
+- It does NOT replace professional medical judgment
+- All recommendations must be reviewed by licensed healthcare professionals
+- The copyright holder assumes NO liability for clinical outcomes
+- Hospitals and healthcare providers deploying this Software assume full responsibility for:
+  - Validation of recommendations
+  - Integration with clinical workflows
+  - Compliance with local regulations (HIPAA, FDA, etc.)
+  - Patient safety and quality of care
+  - Medical malpractice liability
+
+## Regulatory Compliance
+
+Users are responsible for ensuring compliance with all applicable regulations, including but not limited to:
+
+- **United States:** FDA regulations for Software as a Medical Device (SaMD), HIPAA
+- **European Union:** Medical Device Regulation (MDR), GDPR
+- **Other Jurisdictions:** Local healthcare and data protection laws
+
+The copyright holder makes no claims regarding FDA clearance, CE marking, or regulatory approval in any jurisdiction.
+
+## Attribution
+
+When publishing research, derivative works, or modifications of this Software, please cite:
+
+```
+Grok Doc: On-Premises Clinical AI Co-Pilot
+Dino Silvestri, 2025
+https://github.com/bufirstrepo/Grok_doc_revision
+```
+
+## Version
+
+This license applies to Grok Doc version 1.0 and all subsequent versions unless explicitly superseded.
+
+---
+
+**Questions about licensing?** Contact [@ohio_dino](https://twitter.com/ohio_dino)
+
+**Last Updated:** November 18, 2025

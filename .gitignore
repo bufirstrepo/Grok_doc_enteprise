@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Generated data files (users create these locally)
+case_index.faiss
+cases_17k.jsonl
+audit.db
+audit_chain.jsonl
+merkle_chain.txt
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Models (too large for git)
+models/
+*.bin
+*.safetensors
