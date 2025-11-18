@@ -1,0 +1,18 @@
+# 🩺 Grok Doc - On-Premises Clinical AI Co-Pilot
+
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT%20with%20restrictions-yellow.svg)](LICENSE)
+
+> **⚡ Quick Start:** `git clone` → `./setup.sh` → `streamlit run app.py`
+
+## 🎥 Demo Video
+
+**[Watch 60-second demo](YOUR_VIDEO_LINK_HERE)** showing the system running locally
+
+> Note: Demo shows CPU mode. Production deployment with DGX Spark achieves <3s inference.
+
+---
+
+**Zero-cloud, hospital-native clinical decision support powered by local 70B LLM + Bayesian reasoning**
+
+[Rest of your existing README content...]
