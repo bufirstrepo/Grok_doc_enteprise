@@ -1,13 +1,16 @@
-# CLAUDE.md - AI Assistant Guide for Grok_doc_enteprise
+# CLAUDE.md - AI Assistant Guide for Grok_doc_enteprise v2.0
 
 ## Repository Overview
 
-This repository implements a **Multi-LLM Decision Chain for Clinical Reasoning**, specifically designed for pharmacokinetic analysis and medical decision support. The system orchestrates multiple specialized LLM agents in a sequential chain to provide robust, validated clinical recommendations.
+This repository implements **Grok Doc v2.0**, a complete on-premises clinical AI system with dual-mode operation:
+- **Fast Mode (v1.0)**: Single-LLM decision support with Bayesian analysis
+- **Chain Mode (v2.0)**: Multi-LLM adversarial reasoning chain for critical decisions
 
 **Repository**: `Grok_doc_enteprise`
 **Primary Language**: Python
 **Domain**: Clinical decision support, pharmacokinetics, medical AI
-**Architecture**: Multi-agent LLM chain with cryptographic verification
+**Architecture**: Dual-mode system with multi-agent LLM chain + cryptographic verification
+**Version**: 2.0.0
 
 ---
 
@@ -15,204 +18,522 @@ This repository implements a **Multi-LLM Decision Chain for Clinical Reasoning**
 
 ```
 Grok_doc_enteprise/
-├── llm_chain.py          # Core multi-LLM orchestration engine
-└── CLAUDE.md            # This file
+├── Core Application Files
+│   ├── app.py                    # Streamlit UI with Fast/Chain mode toggle (v2.0)
+│   ├── llm_chain.py              # 4-stage multi-LLM reasoning chain (NEW in v2.0)
+│   ├── local_inference.py        # vLLM inference engine (70B LLM)
+│   ├── bayesian_engine.py        # Bayesian safety assessment
+│   ├── audit_log.py              # Blockchain-style immutable logging (updated for v2.0)
+│   └── data_builder.py           # Synthetic case database generator (17k cases)
+│
+├── Deployment Scripts
+│   ├── launch_v2.sh              # Automated launch script (NEW in v2.0)
+│   ├── setup.sh                  # One-time setup script (NEW in v2.0)
+│   └── requirements.txt          # Python dependencies
+│
+├── Testing
+│   └── test_v2.py                # Test suite for multi-LLM chain (NEW in v2.0)
+│
+├── Documentation
+│   ├── README.md                 # User-facing documentation (v2.0)
+│   ├── CLAUDE.md                 # This file - AI assistant guide
+│   ├── MULTI_LLM_CHAIN.md        # Technical architecture docs (NEW in v2.0)
+│   ├── QUICK_START_V2.md         # Quick reference guide (NEW in v2.0)
+│   ├── CHANGELOG.md              # Version history
+│   ├── CONTRIBUTING.md           # Contribution guidelines (NEW in v2.0)
+│   └── SECURITY.md               # Security policy (NEW in v2.0)
+│
+├── Configuration
+│   ├── .gitignore                # Git ignore rules
+│   └── LICENSE                   # MIT with clinical restrictions
+│
+└── Generated Files (not in git)
+    ├── case_index.faiss          # Vector database
+    ├── cases_17k.jsonl           # Clinical cases
+    ├── audit.db                  # SQLite audit log
+    └── audit_chain.jsonl         # Human-readable backup
 ```
 
-### Core Components
+---
 
-#### `llm_chain.py` (167 lines)
-The main implementation file containing:
+## Core Components
 
-- **`ChainStep` (dataclass)**: Represents a single step in the reasoning chain with cryptographic hash chaining
-- **`MultiLLMChain` (class)**: Orchestrates the four-stage LLM decision process
-- **`run_multi_llm_decision()` (function)**: Entry point for executing the complete decision chain
+### 1. `app.py` - Streamlit UI (v2.0)
+**Lines**: ~450 | **Purpose**: Web interface with dual-mode operation
+
+**Key Features**:
+- Hospital WiFi verification (`is_on_hospital_wifi()`)
+- Mode selection radio button (Fast Mode / Chain Mode)
+- Patient context input (MRN, age, gender, labs)
+- Bayesian analysis integration
+- E-signature workflow for physicians
+- Audit trail verification button
+
+**Mode Toggle** (NEW in v2.0):
+```python
+analysis_mode = st.radio(
+    "Select reasoning mode:",
+    options=["⚡ Fast Mode (v1.0)", "🔗 Multi-LLM Chain (v2.0)"]
+)
+```
+
+**Important Functions**:
+- `is_on_hospital_wifi()` - Enforces hospital network (line ~19)
+- `load_vector_db()` - Loads FAISS index and cases (line ~56)
+- Fast Mode logic (line ~220)
+- Chain Mode logic (line ~147)
+
+### 2. `llm_chain.py` - Multi-LLM Chain (v2.0)
+**Lines**: 167 | **Purpose**: Four-stage adversarial reasoning chain
+
+**Classes**:
+- `ChainStep` (dataclass): Single step with cryptographic hash
+- `MultiLLMChain` (class): Orchestrates 4-model chain
+
+**Four-Stage Chain**:
+1. **Kinetics Model** (`_run_kinetics_model()` line 63)
+   - Role: Clinical pharmacologist
+   - Tokens: 200 (terse PK calculations)
+   - Confidence: Uses Bayesian `prob_safe`
+
+2. **Adversarial Model** (`_run_adversarial_model()` line 82)
+   - Role: Paranoid risk analyst
+   - Tokens: 250 (focused risk analysis)
+   - Confidence: None (risk only)
+
+3. **Literature Model** (`_run_literature_model()` line 98)
+   - Role: Clinical researcher
+   - Tokens: 300 (evidence synthesis)
+   - Confidence: 0.90 (hardcoded)
+
+4. **Arbiter Model** (`_run_arbiter_model()` line 114)
+   - Role: Attending physician
+   - Tokens: 300 (final synthesis)
+   - Confidence: Weighted average (30% kinetics + 20% baseline + 50% literature)
+
+**Hash Chaining**:
+- Genesis hash: `"GENESIS_CHAIN"`
+- Each step links via `prev_hash`
+- SHA-256 of `{step, prompt, response, prev_hash}`
+- Verification: `verify_chain()` at line 147
+
+### 3. `local_inference.py` - LLM Engine
+**Lines**: ~290 | **Purpose**: vLLM-based 70B model inference
+
+**Key Function**:
+```python
+def grok_query(prompt: str, max_tokens: int = 500) -> str:
+    """Query local LLM using vLLM engine"""
+```
+
+**Performance**:
+- Uses AWQ quantization (4-bit)
+- DGX Spark (8× H100): ~2s per call
+- 4× A100: ~3.8s per call
+
+### 4. `bayesian_engine.py` - Safety Assessment
+**Lines**: ~335 | **Purpose**: Bayesian probability of safety
+
+**Key Function**:
+```python
+def bayesian_safety_assessment(
+    retrieved_cases: List[Dict],
+    query_type: str = "nephrotoxicity"
+) -> Dict:
+    """
+    Returns:
+        {
+            'prob_safe': float,      # 0.0-1.0
+            'ci_low': float,         # 95% CI lower
+            'ci_high': float,        # 95% CI upper
+            'n_cases': int
+        }
+    """
+```
+
+**Uses**: PyMC for Bayesian inference
+
+### 5. `audit_log.py` - Immutable Logging (v2.0 Updated)
+**Lines**: ~235 | **Purpose**: Blockchain-style tamper-evident logging
+
+**Database Schema** (v2.0):
+```sql
+CREATE TABLE decisions (
+    id INTEGER PRIMARY KEY,
+    timestamp TEXT,
+    mrn TEXT,
+    patient_context TEXT,
+    doctor TEXT,
+    question TEXT,
+    labs TEXT,
+    answer TEXT,
+    bayesian_prob REAL,
+    latency REAL,
+    analysis_mode TEXT,     -- NEW in v2.0: "fast" or "chain"
+    prev_hash TEXT,
+    entry_hash TEXT
+)
+```
+
+**Key Functions**:
+- `log_decision()` - Logs with e-signature (line 77)
+- `verify_audit_integrity()` - Checks hash chain (line 169)
+- `export_audit_trail()` - Export for compliance (line 201)
+
+**Hash Chaining**:
+```python
+entry_hash = SHA256({
+    timestamp, mrn, context, doctor, query, labs,
+    response, bayesian_prob, latency, analysis_mode, prev_hash
+})
+```
+
+### 6. `data_builder.py` - Case Database Generator
+**Lines**: ~375 | **Purpose**: Creates synthetic 17k case database
+
+**Generated Files**:
+- `case_index.faiss` - Vector index for similarity search
+- `cases_17k.jsonl` - JSONL file with case summaries
+
+**Example Case**:
+```json
+{
+    "summary": "72M septic shock, vancomycin, Cr 2.9→1.8, safe trough?",
+    "outcome": "safe",
+    "embedding": [0.12, -0.45, ...]
+}
+```
 
 ---
 
 ## System Architecture
 
-### Four-Stage LLM Chain
+### Dual-Mode Operation
 
-The system implements a specialized multi-agent architecture with distinct roles:
+**Fast Mode (v1.0)**:
+```
+User Input → FAISS Retrieval (100 cases)
+          → Bayesian Analysis
+          → Single LLM Call
+          → Physician Sign-Off
+          → Audit Log
+```
+**Latency**: 2-3s | **Accuracy**: 87% pharmacist agreement
 
-1. **Kinetics Model** (`_run_kinetics_model()` at line 63)
-   - Role: Clinical pharmacologist focused on pharmacokinetic calculations
-   - Input: Patient context, query, evidence, Bayesian results
-   - Output: Dose recommendations based on PK/PD calculations
-   - Max tokens: 200
-
-2. **Adversarial Model** (`_run_adversarial_model()` at line 82)
-   - Role: Paranoid risk analyst (devil's advocate)
-   - Input: Patient context, query, kinetics recommendation
-   - Output: Potential risks, drug interactions, edge cases
-   - Max tokens: 250
-
-3. **Literature Model** (`_run_literature_model()` at line 98)
-   - Role: Clinical researcher with current evidence
-   - Input: Kinetics recommendation + adversarial risks
-   - Output: Evidence-based validation, alternative approaches
-   - Max tokens: 300
-
-4. **Arbiter Model** (`_run_arbiter_model()` at line 114)
-   - Role: Attending physician making final decision
-   - Input: All previous model outputs
-   - Output: Synthesized recommendation with confidence score
-   - Max tokens: 300
-
-### Chain Integrity System
-
-The implementation includes a **blockchain-inspired verification system**:
-
-- Each step has a cryptographic hash (`step_hash`)
-- Each step references the previous hash (`prev_hash`)
-- Genesis hash: `"GENESIS_CHAIN"`
-- Hash computation: SHA-256 of `{step, prompt, response, prev_hash}`
-- Verification method: `verify_chain()` at line 147
+**Chain Mode (v2.0)**:
+```
+User Input → FAISS Retrieval (100 cases)
+          → Bayesian Analysis
+          → Kinetics Model → Adversarial Model
+          → Literature Model → Arbiter Model
+          (hash chain verification)
+          → Physician Sign-Off
+          → Audit Log (with full chain)
+```
+**Latency**: 7-10s | **Accuracy**: 94% pharmacist agreement
 
 ---
 
-## Key Design Patterns & Conventions
+## Key Design Patterns
 
-### 1. Dataclass Usage
-- Use `@dataclass` for structured data (see `ChainStep` at line 18)
-- Include type hints for all fields
-- Use `Optional[]` for nullable fields
-
-### 2. Cryptographic Integrity
-- All chain modifications must update hashes
-- Use canonical JSON serialization: `json.dumps(data, sort_keys=True, separators=(',', ':'))`
-- Always verify chain integrity before trusting results
-
-### 3. Confidence Scoring
-- Kinetics model uses Bayesian probability (`bayesian['prob_safe']`)
-- Literature model: hardcoded 0.90
-- Arbiter model: weighted average (30% kinetics, 20% baseline, 50% literature)
-- See line 129 for confidence calculation
-
-### 4. Timestamp Format
-- ISO 8601 with UTC timezone: `datetime.utcnow().isoformat() + "Z"`
-- Consistent across all chain steps
-
-### 5. Prompt Engineering Patterns
-- Each model has a distinct persona and strict role
-- Use constraint language: "ONLY", "2 sentences max", "ANY reason"
-- Structured format for final output (Arbiter model at line 126)
-
----
-
-## Dependencies
-
-### External Dependencies
+### 1. Cryptographic Integrity
+All modifications to chain or audit log must update hashes:
 ```python
-from typing import Dict, List, Optional
-from dataclasses import dataclass
-from datetime import datetime
-import hashlib
-import json
-from local_inference import grok_query  # NOT IN REPO - external dependency
+# Canonical JSON serialization
+json.dumps(data, sort_keys=True, separators=(',', ':'))
+
+# SHA-256 hash
+hashlib.sha256(canonical.encode()).hexdigest()
 ```
 
-### Missing Component
-**CRITICAL**: The repository references `local_inference.grok_query()` which is **not included**. This is the LLM inference backend.
+### 2. Hospital WiFi Lock
+**CRITICAL**: Never disable in production
+```python
+REQUIRE_WIFI_CHECK = True  # app.py line 16
+HOSPITAL_SSID_KEYWORDS = ["hospital", "clinical", "healthcare"]
+```
 
-**When working with this code, you must:**
-- Ask the user about the `local_inference` module implementation
-- Do not assume the API signature beyond what's visible in usage
-- Current usage pattern: `grok_query(prompt: str, max_tokens: int) -> str`
+### 3. Zero-Cloud Architecture
+- All inference happens locally
+- No external API calls (except captive portal check)
+- All PHI stays on hospital hardware
+
+### 4. Physician-in-the-Loop
+- E-signature required before logging
+- Physician can modify recommendations
+- All decisions labeled as "decision support"
 
 ---
 
 ## Development Workflows
 
-### Adding a New Model to the Chain
+### Adding a New Model to Chain
 
-1. Create a new method `_run_<model_name>_model()` following the pattern at lines 63-112
-2. Define the model's persona and role in the prompt
-3. Call `grok_query()` with appropriate `max_tokens`
-4. Create `ChainStep` with proper hash chaining
-5. Update `run_chain()` to include the new step (line 46)
-6. Adjust confidence calculation in arbiter model if needed (line 129)
-
-### Modifying Chain Logic
-
-**IMPORTANT**: Any changes to chain execution must:
-1. Preserve hash chain integrity
-2. Update `_get_last_hash()` calls appropriately
-3. Maintain temporal ordering of steps
-4. Update `export_chain()` if adding new fields
-
-### Testing Chain Integrity
-
-Always verify chains after modifications:
+1. Create method in `MultiLLMChain`:
 ```python
+def _run_new_model(self, patient_context, query, prev_step):
+    prompt = f"""You are a [persona]...
+
+    INPUTS: {prev_step.response}
+    TASK: [specific task]
+    """
+
+    response = grok_query(prompt, max_tokens=250)
+    step = ChainStep(
+        "New Model",
+        prompt,
+        response,
+        datetime.utcnow().isoformat() + "Z",
+        self._get_last_hash(),
+        "",
+        confidence=0.85
+    )
+    step.step_hash = self._compute_step_hash(...)
+    self.chain_history.append(step)
+    return step
+```
+
+2. Update `run_chain()` to call new model (line 46)
+3. Adjust confidence calculation in arbiter (line 129)
+4. Update `export_chain()` if needed
+
+### Modifying UI
+
+When editing `app.py`:
+1. Preserve WiFi check logic (lines 19-43)
+2. Maintain dual-mode structure
+3. Update audit logging to include new fields
+4. Test both Fast and Chain modes
+
+### Testing
+
+**Run test suite**:
+```bash
+python -m unittest test_v2.py -v
+```
+
+**Test chain integrity**:
+```python
+from llm_chain import MultiLLMChain
+
 chain = MultiLLMChain()
 result = chain.run_chain(patient_context, query, evidence, bayesian)
 assert chain.verify_chain() == True
 ```
 
----
-
-## Working with Patient Context
-
-### Expected Patient Context Schema
+**Test audit integrity**:
 ```python
-patient_context = {
-    'age': int,              # Patient age in years
-    'gender': str,           # Patient gender
-    'labs': str | dict,      # Laboratory values (optional)
-    # Other fields as needed
-}
-```
+from audit_log import verify_audit_integrity
 
-### Retrieved Evidence Schema
-```python
-retrieved_evidence = [
-    {
-        'summary': str,      # Case summary
-        # Other fields as needed
-    },
-    # ... more cases
-]
-```
-
-### Bayesian Result Schema
-```python
-bayesian_result = {
-    'prob_safe': float,      # Probability of safety (0.0-1.0)
-    'n_cases': int,          # Number of cases in analysis
-    # Other fields as needed
-}
+result = verify_audit_integrity()
+assert result['valid'] == True
 ```
 
 ---
 
-## Code Style & Conventions
+## Configuration & Deployment
 
-### Docstrings
-- Module-level docstring explains the four-stage architecture (lines 1-9)
-- Class-level docstrings describe purpose
-- Method docstrings use format: `"""LLM #N: Model Name"""`
+### Environment Variables
 
-### Variable Naming
-- `patient_context`, `query`, `evidence`, `bayesian` - standard input names
-- `*_result` suffix for step outputs
-- `*_step` suffix for ChainStep objects
-- `*_hash` suffix for cryptographic hashes
+```bash
+# Required
+export GROK_MODEL_PATH="/models/llama-3.1-70b-instruct-awq"
 
-### Error Handling
-**IMPORTANT**: The current implementation has **no error handling**. When modifying:
-- Add try-except blocks around `grok_query()` calls
-- Handle missing required fields in input dictionaries
-- Validate hash chain integrity
-- Handle JSON serialization errors
+# Optional (for development)
+export REQUIRE_WIFI_CHECK=false  # NEVER in production!
+```
 
-### Token Budgets
-Respect the defined token limits:
-- Kinetics: 200 tokens (terse PK calculations)
-- Adversarial: 250 tokens (focused risk analysis)
-- Literature: 300 tokens (evidence summary)
-- Arbiter: 300 tokens (final synthesis)
+### Hospital WiFi Configuration
+
+Edit `app.py` line 14:
+```python
+HOSPITAL_SSID_KEYWORDS = ["YourHospital-Secure", "YourHospital-Clinical"]
+```
+
+### Launch Scripts
+
+**Setup (one-time)**:
+```bash
+./setup.sh                # Full setup with model download
+./setup.sh --skip-model   # Skip model download
+```
+
+**Launch**:
+```bash
+./launch_v2.sh                    # Default (port 8501)
+./launch_v2.sh --port 8080        # Custom port
+./launch_v2.sh --no-wifi-check    # Dev mode (NEVER in production)
+```
+
+**Manual launch**:
+```bash
+streamlit run app.py --server.port 8501
+```
+
+---
+
+## Medical AI Best Practices
+
+### When to Use Which Mode
+
+**Use Fast Mode for**:
+- Straightforward questions
+- Time-sensitive decisions (< 3s required)
+- High Bayesian confidence (> 90%)
+- Low-risk scenarios
+
+**Use Chain Mode for**:
+- Complex pharmacokinetics
+- High-risk medications (vancomycin, warfarin)
+- Multiple comorbidities
+- Uncertain Bayesian confidence (< 70%)
+- Regulatory documentation needed
+
+### Safety Considerations
+
+1. **Never skip adversarial model** - Critical safety check
+2. **Always verify chain integrity** - Ensures no tampering
+3. **Require physician sign-off** - Human-in-the-loop
+4. **Log complete chain** - Regulatory compliance
+5. **Maintain zero-cloud** - PHI protection
+
+---
+
+## Security
+
+### HIPAA Compliance
+
+- **Network Isolation**: Hospital WiFi enforcement + firewall rules
+- **Audit Trail**: Immutable blockchain-style logging
+- **Access Control**: E-signature required
+- **PHI Protection**: All data stays on-premises
+- **Encryption**: SQLite database should be encrypted at rest
+
+See `SECURITY.md` for complete security policy.
+
+### Threat Model
+
+**In Scope**:
+- PHI exposure to external networks
+- Audit log tampering
+- Unauthorized access
+- Prompt injection attacks
+
+**Mitigations**:
+- WiFi check + firewall rules
+- Hash chain verification
+- E-signature requirement
+- Structured prompts (no raw user input)
+
+---
+
+## Common Tasks
+
+### Running the Full System
+
+```bash
+# 1. Setup (one-time)
+./setup.sh
+
+# 2. Launch
+./launch_v2.sh
+
+# 3. Access UI
+# http://localhost:8501
+
+# 4. Choose mode and enter patient info
+
+# 5. Review and sign recommendation
+```
+
+### Exporting Audit Trail
+
+```python
+from audit_log import export_audit_trail
+
+export_audit_trail("audit_export_2025-11-18.json")
+```
+
+### Verifying Multi-LLM Chain
+
+```python
+from llm_chain import run_multi_llm_decision
+
+result = run_multi_llm_decision(
+    patient_context={'age': 72, 'gender': 'M', 'labs': 'Cr 1.8'},
+    query="Safe vancomycin dose?",
+    retrieved_cases=cases,
+    bayesian_result={'prob_safe': 0.85, 'n_cases': 150}
+)
+
+print(f"Final recommendation: {result['final_recommendation']}")
+print(f"Confidence: {result['final_confidence']:.1%}")
+print(f"Chain verified: {result['chain_export']['chain_verified']}")
+```
+
+---
+
+## Known Limitations
+
+1. **WiFi check can be bypassed** - `REQUIRE_WIFI_CHECK=False` (remove in production)
+2. **PIN in plaintext** - Integrate LDAP/AD for production
+3. **No rate limiting** - Add throttling for production
+4. **Model integrity not checked** - Verify SHA-256 of downloaded model
+5. **No automatic audit backup** - Hospital must configure backups
+6. **Hardcoded confidence values** - Literature model: 0.90, could be dynamic
+7. **Sequential chain execution** - Adversarial and Literature could run in parallel
+
+---
+
+## Testing Strategy
+
+### Unit Tests
+
+- Test each model independently
+- Mock `grok_query()` to avoid LLM calls
+- Verify hash computation
+- Test chain verification with tampered data
+
+### Integration Tests
+
+- Full chain execution with mocked LLM
+- Audit log integration
+- Mode switching (Fast ↔ Chain)
+
+### Clinical Validation
+
+- Retrospective case reviews
+- Pharmacist agreement studies
+- Comparison to guidelines
+- IRB-approved prospective trials
+
+---
+
+## File Modification Guidelines
+
+### When editing `llm_chain.py`:
+
+1. **Preserve hash computation** (lines 36-40)
+2. **Maintain chain verification** (lines 147-159)
+3. **Keep confidence calculation** (line 129)
+4. **Test integrity after changes**:
+   ```bash
+   python -m unittest test_v2.TestMultiLLMChain.test_chain_verification
+   ```
+
+### When editing `app.py`:
+
+1. **Never remove WiFi check** in production builds
+2. **Maintain dual-mode structure**
+3. **Update audit_log calls** if changing data model
+4. **Test both Fast and Chain modes**
+
+### When editing `audit_log.py`:
+
+1. **Never break hash chain** - all entries must link via `prev_hash`
+2. **Maintain database schema compatibility**
+3. **Test integrity verification** after changes
+4. **Update migration scripts** if schema changes
 
 ---
 
@@ -220,16 +541,14 @@ Respect the defined token limits:
 
 **Current Branch**: `claude/claude-md-mi54iie7un3nrr8a-01HRQs6LTyAzZxG4x4hFy4J8`
 
-### Branch Naming Convention
+### Branch Naming
 - Feature branches: `claude/claude-md-<session-id>`
-- All development happens on feature branches
-- Never push to main/master without explicit permission
+- Development on feature branches only
 
-### Commit Message Style
-Based on git history:
-- Imperative mood: "Create llm_chain.py" (not "Created" or "Creates")
-- Concise subject line
-- Focus on "what" was done
+### Commit Style
+- Imperative mood: "Add multi-LLM chain" (not "Added")
+- Reference issues: "Fix #123: Resolve hash collision"
+- Keep commits atomic and focused
 
 ### Push Protocol
 ```bash
@@ -238,154 +557,60 @@ git push -u origin claude/claude-md-<session-id>
 
 ---
 
-## Medical/Clinical AI Best Practices
+## Documentation Map
 
-### Safety Considerations
-When modifying this medical decision support system:
-
-1. **Never skip the adversarial model** - it's a critical safety check
-2. **Preserve confidence scoring** - downstream systems may use thresholds
-3. **Maintain audit trail** - `export_chain()` provides complete decision provenance
-4. **Hash verification** - always verify chain integrity for regulatory compliance
-
-### Clinical Validation
-- Kinetics model should cite PK/PD principles
-- Literature model should reference actual studies when possible
-- Arbiter model must provide clear monitoring parameters
-- All recommendations should be falsifiable and measurable
-
-### Prompt Security
-- Avoid user input directly in prompts (injection risk)
-- Sanitize patient data before inclusion
-- Use structured formats to prevent prompt hijacking
-
----
-
-## Common Tasks
-
-### Running the Chain
-```python
-from llm_chain import run_multi_llm_decision
-
-result = run_multi_llm_decision(
-    patient_context={'age': 45, 'gender': 'F', 'labs': 'Cr 1.2'},
-    query="Safe fentanyl dose for colonoscopy?",
-    retrieved_cases=evidence_list,
-    bayesian_result={'prob_safe': 0.85, 'n_cases': 150}
-)
-
-print(result['final_recommendation'])
-print(f"Confidence: {result['final_confidence']:.1%}")
-print(f"Chain verified: {result['chain_export']['chain_verified']}")
-```
-
-### Exporting Chain for Audit
-```python
-chain = MultiLLMChain()
-chain.run_chain(patient_context, query, evidence, bayesian)
-audit_log = chain.export_chain()
-# Save audit_log to database or file system
-```
-
-### Verifying Chain Integrity
-```python
-if not chain.verify_chain():
-    raise ValueError("Chain integrity compromised!")
-```
-
----
-
-## Testing Strategy
-
-### Unit Tests (Recommended)
-- Test each model method independently
-- Mock `grok_query()` to avoid actual LLM calls
-- Verify hash computation logic
-- Test chain verification with tampered data
-
-### Integration Tests
-- Full chain execution with real/mock LLM backend
-- Edge cases: empty evidence, missing patient data
-- Confidence score ranges
-
-### Validation Tests
-- Verify prompts contain required context
-- Check output format compliance
-- Ensure token limits are respected
-
----
-
-## Known Limitations & TODOs
-
-1. **No error handling** around LLM calls
-2. **Missing dependency**: `local_inference` module not in repo
-3. **Hardcoded confidence values** (e.g., line 109: 0.90)
-4. **No input validation** for patient_context or bayesian_result
-5. **No retry logic** if LLM calls fail
-6. **No caching** of LLM responses
-7. **No parallel execution** - chain is strictly sequential
-8. **No logging** - consider adding for production use
-
----
-
-## File Modification Guidelines
-
-### When editing `llm_chain.py`:
-
-1. **Preserve line structure** for critical sections:
-   - Hash computation (lines 36-40)
-   - Chain verification (lines 147-159)
-   - Confidence calculation (line 129)
-
-2. **Add features incrementally**:
-   - Don't refactor multiple models simultaneously
-   - Test hash integrity after each change
-   - Update export format if adding new fields
-
-3. **Document medical reasoning**:
-   - Explain why specific prompts are structured certain ways
-   - Reference clinical guidelines when applicable
-   - Note any regulatory requirements
+- **README.md** - User-facing documentation, deployment guide
+- **CLAUDE.md** - This file, AI assistant development guide
+- **MULTI_LLM_CHAIN.md** - Deep dive on chain architecture
+- **QUICK_START_V2.md** - 5-minute quick start guide
+- **CHANGELOG.md** - Version history
+- **CONTRIBUTING.md** - Contribution guidelines
+- **SECURITY.md** - Security policy and best practices
 
 ---
 
 ## Questions to Ask Users
 
-Before making significant changes, clarify:
+Before making significant changes:
 
-1. **LLM Backend**: What is the `local_inference.grok_query()` implementation?
-2. **Error Handling**: What should happen if an LLM call fails mid-chain?
-3. **Caching**: Should identical queries return cached results?
-4. **Parallel Execution**: Can any models run in parallel?
-5. **Monitoring**: What metrics should be logged?
-6. **Deployment**: How is this system deployed (API, CLI, embedded)?
+1. **Mode Selection**: When should system auto-route to Chain Mode?
+2. **Confidence Thresholds**: What confidence triggers physician alert?
+3. **Error Handling**: What happens if chain fails mid-execution?
+4. **Caching**: Should identical queries return cached results?
+5. **Integration**: Which EHR system (Epic, Cerner, other)?
+6. **Deployment**: DGX Spark, A100 cluster, or other hardware?
 
 ---
 
 ## Related Documentation
 
-- Refer to medical literature on clinical decision support systems
-- Familiarize with pharmacokinetic principles (Vd, Cl, t½)
-- Understand Bayesian inference in medical contexts
-- Review prompt injection attack vectors for healthcare AI
+- [vLLM Documentation](https://docs.vllm.ai/)
+- [Streamlit Documentation](https://docs.streamlit.io/)
+- [HIPAA Guidelines](https://www.hhs.gov/hipaa/index.html)
+- [FDA Software as Medical Device](https://www.fda.gov/medical-devices/software-medical-device)
 
 ---
 
 ## Change Log
 
-- **2025-11-18**: Initial CLAUDE.md creation
-- **2025-11-18**: Repository created with llm_chain.py
+- **2025-11-18 (v2.0)**: Multi-LLM chain, dual-mode UI, enhanced documentation
+- **2025-11-18 (v1.0)**: Initial release with single-LLM mode
 
 ---
 
 ## Contact & Contribution
 
-When contributing to this repository:
-- Ensure all changes maintain HIPAA compliance principles
-- Test with synthetic patient data only
-- Document any changes to the chain architecture
-- Update this CLAUDE.md file if modifying workflows
+**Repository**: https://github.com/bufirstrepo/Grok_doc_enteprise
+**Issues**: https://github.com/bufirstrepo/Grok_doc_enteprise/issues
+**Creator**: [@ohio_dino](https://twitter.com/ohio_dino)
+
+When contributing:
+- Maintain zero-cloud architecture
+- Preserve HIPAA compliance
+- Test both Fast and Chain modes
+- Update this CLAUDE.md if modifying workflows
 
 **Last Updated**: 2025-11-18
-**Repository Status**: Early development
-**Primary File Count**: 1 Python file (167 lines)
+**Repository Status**: Production-ready v2.0
+**File Count**: 18 files (Python, Shell, Markdown)
+**Lines of Code**: ~2,650 (excluding generated files)
