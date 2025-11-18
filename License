@@ -1,0 +1,36 @@
+# Grok Doc Evaluation & Restricted License
+Copyright © 2025 Dino Silvestri (@ohio_dino). All rights reserved.
+
+## Granted Rights
+You are free to:
+- View, download, and fork the source code
+- Use, copy, modify, and run the software for:
+  - Personal learning and experimentation
+  - Academic research and publication
+  - Educational purposes
+  - Non-patient-facing internal testing and evaluation
+  - Clinical validation studies (with appropriate IRB/ethics approval)
+
+## Restricted / Paid Uses (require written permission or a commercial license)
+The following are NOT permitted without explicit prior written agreement:
+- Any clinical deployment or patient-facing use in hospitals, clinics, or healthcare facilities
+- Any commercial or for-profit use (including internal business use, SaaS, resale, embedding in products, revenue-generating operations, etc.)
+- Distribution or redistribution of the software or derivatives for clinical or commercial purposes
+
+Contact: @ohio_dino on Twitter/X or licensing@grokdoc.ai for clinical or commercial licensing.
+
+## Medical & Regulatory Disclaimer
+This software is a research-grade clinical decision support tool and is **NOT** a regulated medical device.  
+It has no FDA clearance, CE marking, or equivalent regulatory approval.  
+All clinical use is at your own risk. You are solely responsible for validation, patient safety, regulatory compliance (HIPAA, GDPR, MDR, etc.), and all liability.
+
+## Warranty
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+
+## Attribution (requested for research publications)
+If you publish work using this software, please cite:
+> Grok Doc: On-Premises Clinical AI Co-Pilot  
+> Dino Silvestri, 2025  
+> https://github.com/bufirstrepo/Grok_doc_revision
+
+Last updated: November 18, 2025
