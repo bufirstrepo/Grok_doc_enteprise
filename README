@@ -2,7 +2,7 @@
 
 **Zero-cloud, hospital-native clinical decision support powered by local 70B LLM + Multi-LLM Chain + Bayesian reasoning**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: MIT](check License file) 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![Version](https://img.shields.io/badge/version-2.0-blue)](CHANGELOG.md)
 
