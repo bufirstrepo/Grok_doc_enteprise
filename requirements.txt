@@ -17,6 +17,13 @@ autoawq==0.2.6                 # AWQ quantization (4-bit for 70B models)
 autoawq-kernels==0.0.7         # Optimized CUDA kernels for AWQ
 
 # ============================================================================
+# Whisper Speech-to-Text (whisper_inference.py, mobile_note.py)
+# ============================================================================
+faster-whisper==1.0.3          # Optimized Whisper inference (CTranslate2 backend)
+# Alternative: openai-whisper==20231117 (slower but official)
+# Note: faster-whisper is 4x faster and more memory efficient
+
+# ============================================================================
 # Vector Database & Retrieval (data_builder.py)
 # ============================================================================
 faiss-gpu==1.7.2               # GPU-accelerated similarity search (17k cases)

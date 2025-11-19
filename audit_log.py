@@ -290,5 +290,79 @@ def export_audit_trail(output_path: str = "audit_export.json"):
     
     return export_data
 
+def sign_note(note_text: str, physician_id: str, signature_method: str = "PIN") -> Dict:
+    """
+    Create cryptographic signature for a clinical note (for mobile co-pilot)
+
+    Args:
+        note_text: The clinical note text (SOAP note, etc.)
+        physician_id: Physician identifier
+        signature_method: "PIN", "biometric", or "certificate"
+
+    Returns:
+        {
+            "signature_hash": str,     # SHA-256 of note + physician + timestamp
+            "physician_id": str,
+            "signed_at": str,          # ISO timestamp
+            "note_hash": str,          # Hash of note content only
+            "signature_method": str
+        }
+    """
+    timestamp = datetime.utcnow().isoformat() + "Z"
+
+    # Hash the note content
+    note_hash = hashlib.sha256(note_text.encode('utf-8')).hexdigest()
+
+    # Create signature data
+    signature_data = {
+        "note_hash": note_hash,
+        "physician_id": physician_id,
+        "signed_at": timestamp,
+        "signature_method": signature_method
+    }
+
+    # Compute signature hash
+    canonical = json.dumps(signature_data, sort_keys=True, separators=(',', ':'))
+    signature_hash = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
+
+    return {
+        "signature_hash": signature_hash,
+        "physician_id": physician_id,
+        "signed_at": timestamp,
+        "note_hash": note_hash,
+        "signature_method": signature_method
+    }
+
+def verify_note_signature(note_text: str, signature: Dict) -> bool:
+    """
+    Verify a note signature hasn't been tampered with
+
+    Args:
+        note_text: The clinical note text
+        signature: Signature dict from sign_note()
+
+    Returns:
+        True if signature is valid, False otherwise
+    """
+    # Recompute note hash
+    note_hash = hashlib.sha256(note_text.encode('utf-8')).hexdigest()
+
+    # Check if note hash matches signature
+    if note_hash != signature['note_hash']:
+        return False
+
+    # Recompute signature hash
+    signature_data = {
+        "note_hash": signature['note_hash'],
+        "physician_id": signature['physician_id'],
+        "signed_at": signature['signed_at'],
+        "signature_method": signature['signature_method']
+    }
+
+    canonical = json.dumps(signature_data, sort_keys=True, separators=(',', ':'))
+    expected_hash = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
+
+    return expected_hash == signature['signature_hash']
+
 # Initialize DB on import
 init_db()
