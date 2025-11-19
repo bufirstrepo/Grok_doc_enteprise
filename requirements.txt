@@ -1,0 +1,58 @@
+streamlit>=1.28.0
+sentence-transformers>=2.2.2
+faiss-cpu>=1.7.4
+numpy>=1.24.0
+scipy>=1.11.0
+requests>=2.31.0
+pymc>=5.9.0
+arviz>=0.16.0
+```
+
+5. Scroll down and click **Commit changes**
+
+---
+
+## Additional Quick Fixes (Optional but Recommended)
+
+### Step 6: Add a `.gitignore` File
+
+You already have `.gitignore` content in your documents. Let's make sure it's in the repo:
+
+1. Go to **Code** tab → **Add file** → **Create new file**
+2. Name it: `.gitignore`
+3. Paste this:
+```
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Generated data files (users create these locally)
+case_index.faiss
+cases_17k.jsonl
+audit.db
+audit_chain.jsonl
+merkle_chain.txt
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Models (too large for git)
+models/
+*.bin
+*.safetensors
