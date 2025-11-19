@@ -42,7 +42,9 @@ Grok_doc_enteprise/
 ├── Documentation
 │   ├── README.md                 # User-facing documentation (v2.0)
 │   ├── CLAUDE.md                 # This file - AI assistant guide
+│   ├── ROADMAP.md                # Product roadmap v3.0-v7.0 (NEW in v2.0)
 │   ├── MULTI_LLM_CHAIN.md        # Technical architecture docs (NEW in v2.0)
+│   ├── MOBILE_DEPLOYMENT.md      # Mobile co-pilot deployment guide (NEW in v2.0)
 │   ├── QUICK_START_V2.md         # Quick reference guide (NEW in v2.0)
 │   ├── CHANGELOG.md              # Version history
 │   ├── CONTRIBUTING.md           # Contribution guidelines (NEW in v2.0)
@@ -417,6 +419,112 @@ Voice Recording (60-90s audio)
 
 ---
 
+### Full Enterprise Architecture (Roadmap)
+
+The complete vision extends beyond the current v2.0 implementation to include medical imaging, RPA automation, and multi-agent orchestration:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│           Doctor's Mobile (Hospital WiFi Only)          │
+│  [🎤 Voice Input] → WebSocket → Hospital Server        │
+└────────────────────┬────────────────────────────────────┘
+                     │ HTTPS (Hospital VPN)
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│              Hospital Server (Linux/Windows)            │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │  LLM Array (Kinetics → Adversarial → Lit → Arb)│   │
+│  │  [vLLM: 70B Llama running locally]             │   │
+│  │  Orchestration: CrewAI (role-based agents)     │   │
+│  └─────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │  Medical AI Tools (Roadmap)                     │   │
+│  │  • MONAI (X-ray/CT/MRI analysis)                │   │
+│  │  • CheXNet (Chest X-ray pneumonia detection)    │   │
+│  │  • XGBoost (Lab result predictions)             │   │
+│  │  • scispaCy (Medical NLP entity extraction)     │   │
+│  │  • Neo4j Knowledge Graph (Truth validation)     │   │
+│  │  • Nvidia Clara (Medical imaging pipeline)      │   │
+│  └─────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │  Cross-Verification Engine                      │   │
+│  │  • AutoGen: Multi-agent collaboration           │   │
+│  │  • Compare LLM outputs against each other       │   │
+│  │  • Validate against SNOMED/LOINC/ICD codes      │   │
+│  │  • Durable rules engine (FDA compliance)        │   │
+│  │  • OHDSI integration (clinical research data)   │   │
+│  └─────────────────────────────────────────────────┘   │
+└────────────────────┬────────────────────────────────────┘
+                     │ RDP / VNC / HTTP
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│         Doctor's Office Desktop (Windows/Mac)           │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │  RPA Controller (Roadmap)                       │   │
+│  │  • pyautogui + Playwright automation            │   │
+│  │  • Opens Epic, Word, Excel, Adobe, PACS         │   │
+│  │  • Controls mouse/keyboard for data entry       │   │
+│  │  • Creates reports, draws diagrams              │   │
+│  │  • Auto-populates EHR forms from SOAP notes     │   │
+│  └─────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │  Docking Station Watcher (Roadmap)              │   │
+│  │  • watchdog library monitors USB devices        │   │
+│  │  • USB plugged in → auto-copy to server         │   │
+│  │  • X-rays/labs → MONAI/CheXNet analysis         │   │
+│  │  • Results → Auto-insert into SOAP notes        │   │
+│  └─────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Current Status**: v2.0 implements the core LLM chain and mobile co-pilot. Medical imaging, RPA, and advanced verification are roadmap items.
+
+---
+
+## Technology Stack
+
+### Core (v2.0 - Implemented)
+- **LLM Inference**: vLLM + AWQ quantization (70B Llama 3.1)
+- **Vector Database**: FAISS (similarity search)
+- **Bayesian Analysis**: PyMC (probabilistic safety assessment)
+- **Web Framework**: Streamlit (mobile + desktop UI)
+- **Speech-to-Text**: faster-whisper (HIPAA-compliant transcription)
+- **Audit Trail**: SQLite + SHA-256 hash chaining
+
+### Multi-Agent Orchestration (Roadmap)
+- **CrewAI**: Role-based agent system for 4-LLM chain coordination
+  - Perfect fit for Kinetics → Adversarial → Literature → Arbiter workflow
+  - Each LLM becomes a specialized "crew member" with defined role
+  - Built-in task delegation and result aggregation
+- **AutoGen**: Multi-agent collaboration for cross-verification
+  - Enables LLMs to debate and challenge each other's conclusions
+  - Adversarial model can automatically critique Kinetics model output
+  - Literature model can fact-check both using agent-to-agent messaging
+
+### Medical AI Tools (Roadmap)
+| Tool | Purpose | Integration Point |
+|------|---------|-------------------|
+| **Nvidia Clara** | Medical imaging pipeline | Process DICOM files from PACS |
+| **MONAI** | Radiology AI (X-ray/CT/MRI) | Pre-trained models for image analysis |
+| **CheXNet** | Chest X-ray detection | Pneumonia/pathology detection |
+| **FastAI Medical** | Transfer learning | Retinal scans, pathology slides |
+| **XGBoost** | Lab predictions | Predict trends from time-series labs |
+| **scispaCy** | Medical NLP | Extract entities from clinical notes |
+| **Neo4j** | Knowledge graph | Validate LLM outputs against medical ontologies |
+| **OHDSI** | Clinical research data | Standardized health data for evidence retrieval |
+| **i2b2** | Clinical data warehouse | Hospital analytics integration |
+| **OpenMRS** | Open EHR system | EHR integration patterns |
+
+### RPA & Automation (Roadmap)
+- **pyautogui**: Desktop automation (mouse/keyboard control)
+- **Playwright**: Browser automation (Epic web interface)
+- **watchdog**: File system monitoring (USB device detection)
+- **python-docx**: Word document generation
+- **openpyxl**: Excel report generation
+- **pydicom**: DICOM medical image handling
+
+---
+
 ## Key Design Patterns
 
 ### 1. Cryptographic Integrity
@@ -656,6 +764,270 @@ print(f"Chain verified: {result['chain_export']['chain_verified']}")
 
 ---
 
+## Roadmap & Future Enhancements
+
+### Phase 3: Multi-Agent Orchestration (v3.0)
+
+**Goal**: Replace manual chain coordination with CrewAI role-based agents
+
+**Implementation**:
+```python
+from crewai import Agent, Task, Crew
+
+# Define specialized agents
+kinetics_agent = Agent(
+    role='Clinical Pharmacologist',
+    goal='Calculate precise pharmacokinetics and dosing',
+    backstory='Expert in PK/PD modeling with 20 years experience',
+    llm=grok_query  # Use existing vLLM backend
+)
+
+adversarial_agent = Agent(
+    role='Risk Analyst',
+    goal='Identify all potential risks and contraindications',
+    backstory='Paranoid devil\'s advocate focused on patient safety'
+)
+
+literature_agent = Agent(
+    role='Clinical Researcher',
+    goal='Validate recommendations against current evidence',
+    backstory='Evidence-based medicine expert'
+)
+
+arbiter_agent = Agent(
+    role='Attending Physician',
+    goal='Synthesize inputs into final clinical decision',
+    backstory='Senior physician with decision-making authority'
+)
+
+# Define workflow
+crew = Crew(
+    agents=[kinetics_agent, adversarial_agent, literature_agent, arbiter_agent],
+    tasks=[kinetics_task, adversarial_task, literature_task, arbiter_task],
+    process='sequential'  # Maintains current chain structure
+)
+
+result = crew.kickoff(inputs={'patient': patient_context, 'query': query})
+```
+
+**Benefits**:
+- Agents can autonomously request more information from each other
+- Built-in memory and context sharing
+- Easier to add new specialized agents (e.g., Radiology agent, Lab agent)
+
+**Timeline**: Q1 2026
+
+---
+
+### Phase 4: Medical Imaging AI (v4.0)
+
+**Goal**: Integrate radiology AI for automated image analysis
+
+**Components**:
+
+1. **MONAI Integration** (`monai_analyzer.py`)
+   ```python
+   from monai.networks.nets import DenseNet121
+   from monai.transforms import LoadImage, EnsureChannelFirst, ScaleIntensity
+
+   class MedicalImageAnalyzer:
+       def analyze_xray(self, dicom_path: str) -> Dict:
+           """Analyze chest X-ray for pneumonia, effusion, etc."""
+           image = LoadImage()(dicom_path)
+           prediction = self.model(image)
+           return {
+               'findings': ['Right lower lobe opacity', 'Cardiomegaly'],
+               'confidence': 0.87,
+               'heatmap': heatmap_overlay
+           }
+   ```
+
+2. **CheXNet Integration** (`chexnet_detector.py`)
+   - Stanford's 121-layer DenseNet trained on ChestX-ray14
+   - Detects 14 pathologies: Pneumonia, Effusion, Cardiomegaly, etc.
+   - Generates visual heatmaps for radiologist review
+
+3. **Workflow**:
+   ```
+   USB Device Plugged In (X-ray CD)
+       → watchdog detects new DICOM files
+       → Copy to server /incoming/
+       → MONAI/CheXNet analysis
+       → Results → Radiology LLM Agent
+       → Auto-insert findings into SOAP note
+   ```
+
+**Integration with LLM Chain**:
+- New **Radiology Agent** joins the crew
+- Receives image analysis results
+- Contributes radiologic perspective to clinical decision
+
+**Hardware Requirements**:
+- GPU: A100 40GB (can run alongside 70B LLM with MIG slicing)
+- Storage: 500GB for DICOM cache
+
+**Timeline**: Q2 2026
+
+---
+
+### Phase 5: RPA Desktop Automation (v5.0)
+
+**Goal**: Auto-populate EHR systems from AI-generated SOAP notes
+
+**Components**:
+
+1. **Epic Automation** (`epic_rpa.py`)
+   ```python
+   from playwright.sync_api import sync_playwright
+   import pyautogui
+
+   class EpicRPA:
+       def populate_soap_note(self, soap_text: str, mrn: str):
+           """Opens Epic and auto-fills SOAP note"""
+           with sync_playwright() as p:
+               browser = p.chromium.launch()
+               page = browser.new_page()
+
+               # Navigate to Epic web interface
+               page.goto('https://epic.hospital.local')
+               page.fill('#mrn_input', mrn)
+               page.click('#search_patient')
+
+               # Open new note
+               page.click('text=New Note')
+
+               # Parse SOAP sections
+               sections = self.parse_soap(soap_text)
+               page.fill('#subjective', sections['subjective'])
+               page.fill('#objective', sections['objective'])
+               page.fill('#assessment', sections['assessment'])
+               page.fill('#plan', sections['plan'])
+
+               # Physician reviews before saving
+               input("Press Enter after reviewing note...")
+               page.click('#save_note')
+   ```
+
+2. **Docking Station Watcher** (`usb_watcher.py`)
+   ```python
+   from watchdog.observers import Observer
+   from watchdog.events import FileSystemEventHandler
+
+   class USBHandler(FileSystemEventHandler):
+       def on_created(self, event):
+           if event.src_path.endswith('.dcm'):  # DICOM file
+               print(f"New X-ray detected: {event.src_path}")
+               # Copy to server for MONAI analysis
+               self.copy_to_server(event.src_path)
+           elif event.src_path.endswith('.csv'):  # Lab results
+               # Parse and send to XGBoost predictor
+               self.process_labs(event.src_path)
+
+   observer = Observer()
+   observer.schedule(USBHandler(), path='/media/usb/', recursive=True)
+   observer.start()
+   ```
+
+3. **Document Generation**:
+   - `python-docx`: Generate Word reports for consultations
+   - `openpyxl`: Create Excel spreadsheets for lab trends
+   - `reportlab`: Generate PDF discharge summaries
+   - `matplotlib`: Create charts for patient presentations
+
+**Security Considerations**:
+- RPA runs on doctor's workstation (not server)
+- Requires physician approval before any EHR modification
+- All actions logged to audit trail
+- Session timeout after 5 minutes of inactivity
+
+**Timeline**: Q3 2026
+
+---
+
+### Phase 6: Cross-Verification Engine (v6.0)
+
+**Goal**: Validate LLM outputs against medical ontologies and enable agent debate
+
+**Components**:
+
+1. **AutoGen Multi-Agent Debate**
+   ```python
+   from autogen import AssistantAgent, UserProxyAgent
+
+   # Kinetics agent proposes dose
+   kinetics_agent = AssistantAgent("Kinetics")
+
+   # Adversarial agent challenges
+   adversarial_agent = AssistantAgent("Adversarial")
+
+   # Enable debate
+   result = kinetics_agent.initiate_chat(
+       adversarial_agent,
+       message="I recommend vancomycin 1500mg q12h based on CrCl 45"
+   )
+   # Adversarial: "That's too high for CrCl 45. AUC will exceed 600.
+   #               Recommend 1250mg q12h with trough monitoring."
+   ```
+
+2. **Neo4j Knowledge Graph** (`knowledge_graph.py`)
+   ```python
+   from neo4j import GraphDatabase
+
+   class MedicalKnowledgeGraph:
+       def validate_recommendation(self, drug: str, condition: str) -> bool:
+           """Check if drug is indicated for condition per SNOMED"""
+           query = """
+           MATCH (d:Drug {name: $drug})-[:INDICATED_FOR]->(c:Condition {name: $condition})
+           RETURN count(d) > 0 as is_valid
+           """
+           result = self.driver.execute_query(query, drug=drug, condition=condition)
+           return result[0]['is_valid']
+   ```
+
+3. **SNOMED/LOINC/ICD Validation**:
+   - Verify all diagnoses map to valid ICD-10 codes
+   - Check lab orders use correct LOINC codes
+   - Validate drug names against RxNorm
+
+4. **OHDSI Integration**:
+   - Query Observational Health Data Sciences database
+   - Retrieve real-world evidence for drug safety
+   - Compare recommendations to cohort outcomes
+
+**Timeline**: Q4 2026
+
+---
+
+### Phase 7: XGBoost Lab Predictions (v7.0)
+
+**Goal**: Predict future lab values and trends
+
+**Use Cases**:
+- Predict Cr 24h after vancomycin dose
+- Forecast INR response to warfarin adjustment
+- Anticipate potassium changes with diuretic dosing
+
+**Implementation**:
+```python
+import xgboost as xgb
+
+class LabPredictor:
+    def predict_creatinine_24h(self, patient_features: Dict) -> float:
+        """Predict Cr 24 hours after nephrotoxic drug"""
+        X = self.vectorize_features(patient_features)
+        prediction = self.xgb_model.predict(X)
+        return prediction[0]
+
+# Integration with Kinetics Agent
+predicted_cr = lab_predictor.predict_creatinine_24h(patient_context)
+if predicted_cr > 1.5 * baseline_cr:
+    kinetics_agent.adjust_dose(reason="Predicted AKI in 24h")
+```
+
+**Timeline**: Q1 2027
+
+---
+
 ## Known Limitations
 
 1. **WiFi check can be bypassed** - `REQUIRE_WIFI_CHECK=False` (remove in production)
@@ -744,7 +1116,9 @@ git push -u origin claude/claude-md-<session-id>
 
 - **README.md** - User-facing documentation, deployment guide
 - **CLAUDE.md** - This file, AI assistant development guide
+- **ROADMAP.md** - Product roadmap for v3.0-v7.0 (multi-agent, imaging, RPA)
 - **MULTI_LLM_CHAIN.md** - Deep dive on chain architecture
+- **MOBILE_DEPLOYMENT.md** - Mobile co-pilot deployment guide
 - **QUICK_START_V2.md** - 5-minute quick start guide
 - **CHANGELOG.md** - Version history
 - **CONTRIBUTING.md** - Contribution guidelines
@@ -793,7 +1167,8 @@ When contributing:
 - Test both Fast and Chain modes
 - Update this CLAUDE.md if modifying workflows
 
-**Last Updated**: 2025-11-18
-**Repository Status**: Production-ready v2.0
-**File Count**: 18 files (Python, Shell, Markdown)
-**Lines of Code**: ~2,650 (excluding generated files)
+**Last Updated**: 2025-11-19
+**Repository Status**: Production-ready v2.0 with enterprise roadmap
+**File Count**: 22 files (11 Python, 2 Shell, 9 Markdown)
+**Lines of Code**: ~4,100 (excluding generated files)
+**Roadmap**: v3.0-v7.0 planned through Q1 2027
