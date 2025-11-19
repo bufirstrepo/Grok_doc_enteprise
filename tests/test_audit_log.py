@@ -1,14 +1,11 @@
-# Create tests directory
-mkdir -p tests
-
-# Create test file
-cat > tests/test_audit_log.py << 'EOF'
 """
 Basic tests for audit logging functionality
 """
 
 import os
 import tempfile
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from audit_log import log_decision, verify_audit_integrity
 
 def test_audit_logging():
@@ -48,4 +45,3 @@ def test_audit_logging():
 
 if __name__ == "__main__":
     test_audit_logging()
-EOF

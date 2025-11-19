@@ -1,0 +1,102 @@
+# Grok Doc Evaluation & Commercial Licensing Agreement
+
+Copyright © 2025 Dino Silvestri (@ohio_dino). All rights reserved.
+
+---
+
+## ⚠️ IMPORTANT: This is NOT an MIT License or Open Source License
+
+This software is **proprietary** with limited evaluation rights. Clinical and commercial use requires a paid commercial license.
+
+---
+
+## Evaluation Rights (Free)
+
+You may:
+- View, download, and fork the source code
+- Use for personal learning and experimentation
+- Use for academic research and publication
+- Use for educational purposes in universities
+- Use for non-patient-facing internal testing and evaluation
+- Use for clinical validation studies (with IRB/ethics approval)
+
+## Restricted Uses (Require Commercial License)
+
+**🚫 NOT PERMITTED WITHOUT PAID LICENSE:**
+
+### Clinical Use
+- Any deployment in hospitals, clinics, or healthcare facilities
+- Any patient-facing use or direct clinical care
+- Integration into clinical workflows
+- Use for medical decision support in production environments
+
+### Commercial Use
+- Selling or licensing the software
+- Offering Software-as-a-Service (SaaS)
+- Integrating into commercial products
+- Using in revenue-generating operations
+- Internal business use in companies (except evaluation)
+- Distribution or redistribution for clinical/commercial purposes
+
+## Commercial Licensing
+
+**For clinical deployment or commercial use, you MUST:**
+
+1. **Contact for Sales:** [@ohio_dino](https://twitter.com/ohio_dino) on Twitter/X or licensing@grokdoc.ai
+2. **Provide:** Use case, institution/company details, deployment scale
+3. **Negotiate:** Licensing terms, pricing, support agreements
+4. **Execute:** Commercial license agreement before deployment
+
+**Pricing:** Custom quotes based on:
+- Deployment scale (number of users/facilities)
+- Use case (research vs. production clinical)
+- Support requirements
+- Integration complexity
+
+## Warranty Disclaimer
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+## Medical Disclaimer
+
+**IMPORTANT: This Software is a clinical decision support tool, not a medical device.**
+
+- It does NOT replace professional medical judgment
+- All recommendations must be reviewed by licensed healthcare professionals
+- The copyright holder assumes NO liability for clinical outcomes
+- Hospitals and healthcare providers deploying this Software assume full responsibility for:
+  - Validation of recommendations
+  - Integration with clinical workflows
+  - Compliance with local regulations (HIPAA, FDA, etc.)
+  - Patient safety and quality of care
+  - Medical malpractice liability
+
+## Regulatory Compliance
+
+Users are responsible for ensuring compliance with all applicable regulations, including but not limited to:
+
+- **United States:** FDA regulations for Software as a Medical Device (SaMD), HIPAA
+- **European Union:** Medical Device Regulation (MDR), GDPR
+- **Other Jurisdictions:** Local healthcare and data protection laws
+
+The copyright holder makes no claims regarding FDA clearance, CE marking, or regulatory approval in any jurisdiction.
+
+## Attribution
+
+When publishing research, derivative works, or modifications of this Software, please cite:
+
+```
+Grok Doc: On-Premises Clinical AI Co-Pilot
+Dino Silvestri, 2025
+https://github.com/bufirstrepo/Grok_doc_revision
+```
+
+## Version
+
+This license applies to Grok Doc version 1.0 and all subsequent versions unless explicitly superseded.
+
+---
+
+**Questions about licensing?** Contact [@ohio_dino](https://twitter.com/ohio_dino)
+
+**Last Updated:** November 18, 2025

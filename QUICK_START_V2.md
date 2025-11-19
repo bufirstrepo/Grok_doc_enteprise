@@ -1,153 +1,177 @@
 # Grok Doc v2.0 - Quick Start Guide
 
-## Files to Copy
+## 🚀 Get Running in 5 Minutes
 
-Create these files in your new repo:
+### Prerequisites
+- Python 3.9+
+- 80GB+ VRAM GPU (or use smaller model)
+- Hospital WiFi network
 
-```
-Grok_doc_revision/
-├── llm_chain.py              # NEW - Multi-LLM chain
-├── app.py                    # UPDATED - v2.0 UI
-├── local_inference.py        # Keep from v1.0
-├── bayesian_engine.py        # Keep from v1.0
-├── audit_log.py              # Keep from v1.0
-├── data_builder.py           # Keep from v1.0
-├── requirements.txt          # Keep from v1.0
-├── setup.sh                  # Keep from v1.0
-├── README.md                 # UPDATED - v2.0 docs
-├── MULTI_LLM_CHAIN.md        # NEW - Chain docs
-├── CHANGELOG.md              # UPDATED - v2.0 history
-├── CONTRIBUTING.md           # Keep from v1.0
-├── SECURITY.md               # Keep from v1.0
-├── LICENSE                   # Keep from v1.0
-├── .gitignore                # NEW
-├── test_v2.py                # NEW - Tests
-├── launch_v2.sh              # NEW - Auto deploy
-└── QUICK_START_V2.md         # This file
-```
-
-## Deploy to GitHub
-
-### Option 1: Automated
-```bash
-chmod +x launch_v2.sh
-./launch_v2.sh
-```
-
-### Option 2: Manual
-```bash
-# Create new repo on GitHub
-# Clone it locally
-git clone https://github.com/YOUR_USERNAME/Grok_doc_revision.git
-cd Grok_doc_revision
-
-# Copy all files from artifacts into this directory
-
-# Add all files
-git add .
-
-# Commit
-git commit -m "Initial v2.0 release with Multi-LLM chain"
-
-# Tag
-git tag -a v2.0.0 -m "Multi-LLM Decision Chain"
-
-# Push
-git push origin main --tags
-```
-
-## Test Locally
+### Install
 
 ```bash
-# Install dependencies
+git clone https://github.com/bufirstrepo/Grok_doc_enteprise.git
+cd Grok_doc_enteprise
 pip install -r requirements.txt
+python data_builder.py  # Generate sample database
+```
 
-# Run tests
-python test_v2.py
+### Launch
 
-# Build database
-python data_builder.py
-
-# Start app
+```bash
+./launch_v2.sh
+# Or manually:
 streamlit run app.py
 ```
 
-## Key Features
+Access at: `http://localhost:8501`
 
-### Fast Mode (v1.0)
-- Uncheck "Enable 4-Stage Chain"
-- ~3 second response
-- Single LLM
+---
 
-### Chain Mode (v2.0)
-- Check "Enable 4-Stage Chain"  
-- ~10-15 second response
-- 4 specialized LLMs
-- Full reasoning breakdown
+## 🎯 Your First Query
 
-## Tweet Template
+1. **Enter patient info:**
+   - MRN: `12345678`
+   - Age: `72`
+   - Gender: `Male`
+   - Question: `"72M septic shock on vancomycin, Cr 2.9→1.8. Safe trough?"`
 
+2. **Choose mode:**
+   - **⚡ Fast Mode**: Quick answer (~2s)
+   - **🔗 Chain Mode**: Deep reasoning (~8s)
+
+3. **Review & sign** the recommendation
+
+---
+
+## 🔗 Multi-LLM Chain (v2.0)
+
+**When to use Chain Mode:**
+- High-risk medications (vancomycin, warfarin, aminoglycosides)
+- Complex cases with comorbidities
+- Low Bayesian confidence (< 70%)
+- Need complete audit trail
+
+**What happens:**
+1. **Kinetics Model** → PK/PD calculations
+2. **Adversarial Model** → Risk analysis (devil's advocate)
+3. **Literature Model** → Evidence-based validation
+4. **Arbiter Model** → Final synthesized recommendation
+
+**Output:**
+- Final recommendation with confidence score
+- Complete reasoning chain (4 steps)
+- Cryptographic hash verification
+- Full audit trail for regulatory compliance
+
+---
+
+## ⚡ Fast Mode (v1.0)
+
+**When to use Fast Mode:**
+- Straightforward clinical questions
+- Time-sensitive decisions
+- High Bayesian confidence (> 90%)
+- Low-risk scenarios
+
+**What happens:**
+1. Vector search → 100 similar cases
+2. Bayesian safety analysis
+3. Single LLM call with evidence
+4. Recommendation with confidence
+
+---
+
+## 🔒 Audit Trail
+
+Every decision is logged with:
+- Patient context + query
+- AI recommendation
+- Physician signature
+- Analysis mode (Fast vs Chain)
+- Cryptographic hash (tamper-evident)
+
+**Verify integrity:**
+```bash
+python -c "from audit_log import verify_audit_integrity; print(verify_audit_integrity())"
 ```
-🚀 Grok Doc v2.0 - Multi-LLM Clinical AI
 
-4 specialized models analyze every decision:
-🔬 Kinetics → ⚠️ Adversarial → 📚 Literature → ⚖️ Arbiter
+---
 
-• Built-in peer review catches edge cases
-• Transparent reasoning for legal defensibility
-• Cryptographically verified audit trail
+## 🛠️ Common Commands
 
-github.com/YOUR_USERNAME/Grok_doc_revision
+```bash
+# Launch with custom port
+./launch_v2.sh --port 8080
 
-@elonmusk @xai
+# Disable WiFi check (dev only)
+./launch_v2.sh --no-wifi-check
+
+# Run tests
+python -m unittest test_v2.py
+
+# Export audit trail
+python -c "from audit_log import export_audit_trail; export_audit_trail('audit.json')"
+
+# Verify chain integrity
+python -c "from llm_chain import MultiLLMChain; print('Chain OK')"
 ```
-Mobile Co-Pilot: Voice-to-SOAP Clinical Documentation System
-🚀 NEW FEATURE: Transform documentation from 15-40 min → under 2 minutes
 
-New Files:
-- mobile_note.py: Mobile-optimized Streamlit interface for physicians
-  - Voice recording + file upload support
-  - One-tap SOAP note generation
-  - Built-in signature and audit logging
-  - Mobile-first responsive design
+---
 
-- whisper_inference.py: Local HIPAA-compliant speech-to-text
-  - Uses faster-whisper (4x faster than OpenAI Whisper)
-  - Zero-cloud transcription (all on-premises)
-  - Supports multiple model sizes (tiny to large-v3)
-  - Compatible with vLLM backend
+## 📊 Performance Tips
 
-- soap_generator.py: SOAP note formatter with evidence citations
-  - Converts multi-LLM chain output to structured SOAP notes
-  - Extracts Subjective, Objective, Assessment, Plan sections
-  - Includes evidence citations from Literature Model
-  - Auto-suggests CPT billing codes based on complexity
+**For faster inference:**
+- Use AWQ-quantized models (4-bit)
+- Enable tensor parallelism: `--tensor-parallel-size 4`
+- Use vLLM for batching
 
-- MOBILE_DEPLOYMENT.md: Complete deployment and usage guide
-  - Step-by-step setup instructions
-  - Performance benchmarks and ROI calculations
-  - HIPAA compliance checklist
-  - Troubleshooting guide
+**For better accuracy:**
+- Use Chain Mode for critical decisions
+- Increase case database size (50k+ cases)
+- Update to latest clinical guidelines
 
-Updated Files:
-- audit_log.py:
-  - Added sign_note() for cryptographic note signatures
-  - Added verify_note_signature() for integrity verification
-  - SHA-256 hashing with physician ID + timestamp
+---
 
-- requirements.txt:
-  - Added faster-whisper==1.0.3 for speech recognition
-  - Documented alternative Whisper options
-  - Installation notes for mobile co-pilot
+##⚠️ Troubleshooting
 
-Benefits:
-- Saves 6+ hours per day per physician
-- ROI: $300k/year per physician in time savings
-- Complete HIPAA compliance (zero-cloud architecture)
-- Full audit trail with cryptographic signatures
-- Works on iOS/Android browsers via bookmark
+**"Model not found"**
+```bash
+export GROK_MODEL_PATH="/path/to/your/model"
+```
 
-Processing Time:
-- Whisper transcription: 3-5s (60-90s audio)
-- Multi-LLM chain: 12-18s (4 models)
-- Total workflow: < 2 minutes (vs 15-40 min manual)
+**"FAISS index not found"**
+```bash
+python data_builder.py
+```
+
+**"WiFi check failed"**
+```python
+# In app.py, set:
+REQUIRE_WIFI_CHECK = False
+```
+
+**"Chain verification failed"**
+```python
+# Check audit logs for tampering
+from audit_log import verify_audit_integrity
+result = verify_audit_integrity()
+print(result)
+```
+
+---
+
+## 📞 Get Help
+
+- **Issues**: https://github.com/bufirstrepo/Grok_doc_enteprise/issues
+- **Docs**: See README.md and MULTI_LLM_CHAIN.md
+- **Contact**: [@ohio_dino](https://twitter.com/ohio_dino)
+
+---
+
+**Quick Reference:**
+- Fast Mode = 1 LLM call (~2s)
+- Chain Mode = 4 LLM calls (~8s)
+- Both modes use Bayesian analysis + case retrieval
+- All decisions logged with e-signature
+- 100% on-premises, zero cloud

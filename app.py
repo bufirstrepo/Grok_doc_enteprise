@@ -28,6 +28,7 @@ def is_on_hospital_wifi():
     if not REQUIRE_WIFI_CHECK:
         return True
 
+    
     try:
         r = requests.get(CAPTIVE_PORTAL_CHECK, timeout=3, allow_redirects=True)
         url_check = any(kw in r.url.lower() for kw in HOSPITAL_SSID_KEYWORDS)
@@ -65,6 +66,9 @@ def load_vector_db():
 
     embedder = SentenceTransformer('all-MiniLM-L6-v2')
 
+    
+    embedder = SentenceTransformer('all-MiniLM-L6-v2')
+    
     # Create sample data if files don't exist
     if not os.path.exists(index_path) or not os.path.exists(cases_path):
         st.warning("Creating sample case database for demo purposes...")
@@ -73,11 +77,15 @@ def load_vector_db():
 
     index = faiss.read_index(index_path)
 
+    
+    index = faiss.read_index(index_path)
+    
     cases = []
     with open(cases_path, 'r') as f:
         for line in f:
             cases.append(json.loads(line))
 
+    
     return index, cases, embedder
 
 try:
@@ -91,6 +99,7 @@ except Exception as e:
 with st.sidebar:
     st.header("Patient Context")
 
+    
     mrn = st.text_input(
         "Medical Record Number (MRN)",
         help="Required for audit trail"
@@ -99,12 +108,17 @@ with st.sidebar:
     age = st.slider("Age", 0, 120, 72)
     gender = st.selectbox("Gender", ["Male", "Female", "Other"])
 
+    
+    age = st.slider("Age", 0, 120, 72)
+    gender = st.selectbox("Gender", ["Male", "Female", "Other"])
+    
     chief = st.text_area(
         "Chief complaint / Clinical question",
         value="72 yo male, septic shock on vancomycin, Cr 2.9 → 1.8. Safe trough?",
         height=100
     )
 
+    
     labs = st.text_area(
         "Key labs / imaging (optional)",
         placeholder="Cr: 1.8, WBC: 14.2, Vanc trough: 18.3",
@@ -126,6 +140,9 @@ with st.sidebar:
 
     st.divider()
 
+    
+    st.divider()
+    
     col1, col2 = st.columns(2)
     with col1:
         submit = st.button("🔍 Analyze", type="primary", use_container_width=True)
