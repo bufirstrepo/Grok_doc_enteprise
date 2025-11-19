@@ -1,0 +1,224 @@
+version: '3.8'
+
+services:
+  # ============================================================================
+  # CORE APPLICATION SERVICES
+  # ============================================================================
+
+  streamlit-ui:
+    image: python:3.11-slim
+    container_name: grokdoc-ui
+    command: streamlit run /app/app.py --server.port 8501 --server.address 0.0.0.0
+    working_dir: /app
+    volumes:
+      - .:/app
+    ports:
+      - "8501:8501"
+    environment:
+      - REQUIRE_WIFI_CHECK=false  # Disable in Docker
+      - GROK_MODEL_PATH=/models/llama-3.1-70b-instruct-awq
+    depends_on:
+      - vllm-server
+      - neo4j
+      - ganache
+    networks:
+      - grokdoc-network
+    restart: unless-stopped
+
+  mobile-ui:
+    image: python:3.11-slim
+    container_name: grokdoc-mobile-ui
+    command: streamlit run /app/mobile_note.py --server.port 8502 --server.address 0.0.0.0
+    working_dir: /app
+    volumes:
+      - .:/app
+    ports:
+      - "8502:8502"
+    environment:
+      - REQUIRE_WIFI_CHECK=false
+    depends_on:
+      - websocket-server
+      - vllm-server
+    networks:
+      - grokdoc-network
+    restart: unless-stopped
+
+  websocket-server:
+    image: python:3.11-slim
+    container_name: grokdoc-websocket
+    command: python3 /app/src/mobile_server.py
+    working_dir: /app
+    volumes:
+      - .:/app
+    ports:
+      - "8765:8765"
+    environment:
+      - JWT_SECRET=your-secret-key-change-in-production
+    networks:
+      - grokdoc-network
+    restart: unless-stopped
+
+  # ============================================================================
+  # LLM INFERENCE SERVER (vLLM)
+  # ============================================================================
+
+  vllm-server:
+    image: vllm/vllm-openai:latest
+    container_name: grokdoc-vllm
+    command: >
+      --model /models/llama-3.1-70b-instruct-awq
+      --quantization awq
+      --dtype auto
+      --gpu-memory-utilization 0.9
+      --max-model-len 4096
+    volumes:
+      - /path/to/models:/models  # Update this path
+    ports:
+      - "8000:8000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+      - grokdoc-network
+    restart: unless-stopped
+
+  # ============================================================================
+  # KNOWLEDGE GRAPH (Neo4j)
+  # ============================================================================
+
+  neo4j:
+    image: neo4j:5.13-community
+    container_name: grokdoc-neo4j
+    environment:
+      - NEO4J_AUTH=neo4j/grokdoc_password_change_me
+      - NEO4J_dbms_memory_pagecache_size=2G
+      - NEO4J_dbms_memory_heap_max__size=4G
+    volumes:
+      - neo4j-data:/data
+      - neo4j-logs:/logs
+      - ./data/neo4j_import:/import  # For loading SNOMED/LOINC data
+    ports:
+      - "7474:7474"  # HTTP
+      - "7687:7687"  # Bolt
+    networks:
+      - grokdoc-network
+    restart: unless-stopped
+
+  # ============================================================================
+  # BLOCKCHAIN (Local Ethereum - Ganache)
+  # ============================================================================
+
+  ganache:
+    image: trufflesuite/ganache:latest
+    container_name: grokdoc-ganache
+    command: >
+      --wallet.deterministic
+      --wallet.totalAccounts 10
+      --wallet.defaultBalance 1000
+      --miner.blockGasLimit 12000000
+      --chain.chainId 1337
+    ports:
+      - "8545:8545"
+    volumes:
+      - ganache-data:/ganache_data
+    networks:
+      - grokdoc-network
+    restart: unless-stopped
+
+  # ============================================================================
+  # IPFS (Decentralized Storage)
+  # ============================================================================
+
+  ipfs:
+    image: ipfs/kubo:latest
+    container_name: grokdoc-ipfs
+    environment:
+      - IPFS_PROFILE=server
+    volumes:
+      - ipfs-data:/data/ipfs
+    ports:
+      - "4001:4001"  # P2P swarm
+      - "5001:5001"  # HTTP API
+      - "8080:8080"  # Gateway
+    networks:
+      - grokdoc-network
+    restart: unless-stopped
+
+  # ============================================================================
+  # DATABASE (PostgreSQL for structured data - optional)
+  # ============================================================================
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: grokdoc-postgres
+    environment:
+      - POSTGRES_DB=grokdoc
+      - POSTGRES_USER=grokdoc_user
+      - POSTGRES_PASSWORD=change_me_in_production
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - grokdoc-network
+    restart: unless-stopped
+
+  # ============================================================================
+  # MONITORING (Optional - Prometheus + Grafana)
+  # ============================================================================
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: grokdoc-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - grokdoc-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grokdoc-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - grokdoc-network
+    restart: unless-stopped
+
+# ==============================================================================
+# NETWORKS
+# ==============================================================================
+
+networks:
+  grokdoc-network:
+    driver: bridge
+
+# ==============================================================================
+# VOLUMES
+# ==============================================================================
+
+volumes:
+  neo4j-data:
+  neo4j-logs:
+  ganache-data:
+  ipfs-data:
+  postgres-data:
+  prometheus-data:
+  grafana-data:
