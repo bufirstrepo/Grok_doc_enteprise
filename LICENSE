@@ -1,49 +1,59 @@
-# MIT License with Clinical/Commercial Use Restriction
+# Grok Doc Evaluation & Commercial Licensing Agreement
 
-Copyright (c) 2025 Dino Silvestri (@ohio_dino)
+Copyright © 2025 Dino Silvestri (@ohio_dino). All rights reserved.
 
-## Permissions
+---
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to use, copy, modify, merge, and distribute the Software for **non-commercial, academic, research, and personal purposes**, subject to the following conditions:
+## ⚠️ IMPORTANT: This is NOT an MIT License or Open Source License
 
-## Restrictions
+This software is **proprietary** with limited evaluation rights. Clinical and commercial use requires a paid commercial license.
 
-**Clinical and Commercial Use Restriction:**
+---
 
-1. **Clinical Deployment:** Any deployment of this Software in a clinical setting (hospitals, clinics, medical practices, or any healthcare facility providing patient care) requires prior written authorization from the copyright holder.
+## Evaluation Rights (Free)
 
-2. **Commercial Use:** Any use of this Software for commercial purposes, including but not limited to:
-   - Selling or licensing the Software
-   - Offering Software-as-a-Service (SaaS) based on this Software
-   - Integrating into proprietary commercial products
-   - Using in revenue-generating clinical operations
-   
-   requires prior written authorization and a separate commercial license agreement.
+You may:
+- View, download, and fork the source code
+- Use for personal learning and experimentation
+- Use for academic research and publication
+- Use for educational purposes in universities
+- Use for non-patient-facing internal testing and evaluation
+- Use for clinical validation studies (with IRB/ethics approval)
 
-3. **Modifications:** Derivative works intended for clinical or commercial use are subject to the same restrictions as the original Software.
+## Restricted Uses (Require Commercial License)
 
-## Permitted Use
+**🚫 NOT PERMITTED WITHOUT PAID LICENSE:**
 
-The following uses are **explicitly permitted without additional authorization**:
+### Clinical Use
+- Any deployment in hospitals, clinics, or healthcare facilities
+- Any patient-facing use or direct clinical care
+- Integration into clinical workflows
+- Use for medical decision support in production environments
 
-- Academic research and publication
-- Educational purposes in universities and training programs
-- Personal learning and experimentation
-- Open-source development and contribution
-- Internal hospital testing and evaluation (non-patient-facing)
-- Clinical validation studies (with IRB approval)
+### Commercial Use
+- Selling or licensing the software
+- Offering Software-as-a-Service (SaaS)
+- Integrating into commercial products
+- Using in revenue-generating operations
+- Internal business use in companies (except evaluation)
+- Distribution or redistribution for clinical/commercial purposes
 
-## Authorization Process
+## Commercial Licensing
 
-To obtain authorization for clinical deployment or commercial use:
+**For clinical deployment or commercial use, you MUST:**
 
-1. Contact: Dino Silvestri via Twitter [@ohio_dino](https://twitter.com/ohio_dino)
-2. Provide: Intended use case, institution/company details, deployment scale
-3. Negotiate: Licensing terms, support agreements, liability provisions
+1. **Contact for Sales:** [@ohio_dino](https://twitter.com/ohio_dino) on Twitter/X or licensing@grokdoc.ai
+2. **Provide:** Use case, institution/company details, deployment scale
+3. **Negotiate:** Licensing terms, pricing, support agreements
+4. **Execute:** Commercial license agreement before deployment
 
-## Standard MIT Conditions
+**Pricing:** Custom quotes based on:
+- Deployment scale (number of users/facilities)
+- Use case (research vs. production clinical)
+- Support requirements
+- Integration complexity
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+## Warranty Disclaimer
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
