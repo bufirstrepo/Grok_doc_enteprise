@@ -21,6 +21,16 @@ import hashlib
 from local_inference import grok_query
 from bayesian_engine import bayesian_safety_assessment
 
+# Import CrewAI tools
+from crewai_tools import (
+    PharmacokineticCalculatorTool,
+    DrugInteractionCheckerTool,
+    GuidelineLookupTool,
+    LabPredictorTool,
+    ImagingAnalyzerTool,
+    KnowledgeGraphTool
+)
+
 
 class MedicalLLMWrapper:
     """Wrapper to make grok_query compatible with CrewAI"""
@@ -64,6 +74,14 @@ class GrokDocCrew:
     def _create_agents(self):
         """Create specialized medical agents"""
 
+        # Initialize tools
+        pk_tool = PharmacokineticCalculatorTool()
+        interaction_tool = DrugInteractionCheckerTool()
+        guideline_tool = GuidelineLookupTool()
+        lab_tool = LabPredictorTool()
+        imaging_tool = ImagingAnalyzerTool()
+        kg_tool = KnowledgeGraphTool()
+
         self.kinetics_agent = Agent(
             role='Clinical Pharmacologist',
             goal='Calculate precise pharmacokinetics and recommend optimal dosing',
@@ -73,7 +91,8 @@ class GrokDocCrew:
             meticulous about adjusting doses for renal/hepatic impairment.""",
             verbose=True,
             allow_delegation=False,
-            llm=self.kinetics_llm
+            llm=self.kinetics_llm,
+            tools=[pk_tool, lab_tool]  # PK calculator + lab predictor
         )
 
         self.adversarial_agent = Agent(
@@ -85,7 +104,8 @@ class GrokDocCrew:
             demand evidence of safety. You consider worst-case scenarios.""",
             verbose=True,
             allow_delegation=False,
-            llm=self.adversarial_llm
+            llm=self.adversarial_llm,
+            tools=[interaction_tool, kg_tool]  # Drug interactions + knowledge graph
         )
 
         self.literature_agent = Agent(
@@ -97,7 +117,8 @@ class GrokDocCrew:
             You cite specific studies and guidelines to support or refute recommendations.""",
             verbose=True,
             allow_delegation=False,
-            llm=self.literature_llm
+            llm=self.literature_llm,
+            tools=[guideline_tool, kg_tool]  # Guidelines + knowledge graph validation
         )
 
         self.arbiter_agent = Agent(
@@ -109,7 +130,8 @@ class GrokDocCrew:
             You provide clear monitoring instructions and follow-up plans.""",
             verbose=True,
             allow_delegation=True,
-            llm=self.arbiter_llm
+            llm=self.arbiter_llm,
+            tools=[kg_tool, lab_tool]  # Final validation + lab predictions
         )
 
         if self.use_radiology and self.radiology_llm:
@@ -122,7 +144,8 @@ class GrokDocCrew:
                 clinical context.""",
                 verbose=True,
                 allow_delegation=False,
-                llm=self.radiology_llm
+                llm=self.radiology_llm,
+                tools=[imaging_tool]  # Medical imaging analyzer
             )
 
     def create_tasks(
