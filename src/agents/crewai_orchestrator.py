@@ -16,20 +16,23 @@ from typing import Dict, List, Optional
 import json
 from datetime import datetime
 import hashlib
+import sys
+import os
 
-# Import existing components
+# Add project root to path
+sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
+
+# Import existing components (from root)
 from local_inference import grok_query
 from bayesian_engine import bayesian_safety_assessment
 
-# Import CrewAI tools
-from crewai_tools import (
-    PharmacokineticCalculatorTool,
-    DrugInteractionCheckerTool,
-    GuidelineLookupTool,
-    LabPredictorTool,
-    ImagingAnalyzerTool,
-    KnowledgeGraphTool
-)
+# Import CrewAI tools from src/tools/
+from src.tools.monai_tool import MonaiTool
+from src.tools.xgboost_tool import XGBoostTool
+from src.tools.neo4j_tool import Neo4jTool
+from src.tools.scispacy_tool import ScispacyTool
+from src.tools.epic_tool import EpicTool
+from src.tools.blockchain_tool import BlockchainTool
 
 
 class MedicalLLMWrapper:
@@ -74,13 +77,13 @@ class GrokDocCrew:
     def _create_agents(self):
         """Create specialized medical agents"""
 
-        # Initialize tools
-        pk_tool = PharmacokineticCalculatorTool()
-        interaction_tool = DrugInteractionCheckerTool()
-        guideline_tool = GuidelineLookupTool()
-        lab_tool = LabPredictorTool()
-        imaging_tool = ImagingAnalyzerTool()
-        kg_tool = KnowledgeGraphTool()
+        # Initialize tools from src/tools/
+        monai_tool = MonaiTool()           # Medical imaging (MONAI + CheXNet)
+        xgboost_tool = XGBoostTool()       # Lab predictions (XGBoost)
+        neo4j_tool = Neo4jTool()           # Knowledge graph (Neo4j)
+        scispacy_tool = ScispacyTool()     # Medical NLP (sciSpaCy)
+        epic_tool = EpicTool()             # Epic EHR integration
+        blockchain_tool = BlockchainTool()  # Blockchain audit logging
 
         self.kinetics_agent = Agent(
             role='Clinical Pharmacologist',
@@ -92,7 +95,7 @@ class GrokDocCrew:
             verbose=True,
             allow_delegation=False,
             llm=self.kinetics_llm,
-            tools=[pk_tool, lab_tool]  # PK calculator + lab predictor
+            tools=[xgboost_tool, neo4j_tool]  # Lab predictor + knowledge graph
         )
 
         self.adversarial_agent = Agent(
@@ -105,7 +108,7 @@ class GrokDocCrew:
             verbose=True,
             allow_delegation=False,
             llm=self.adversarial_llm,
-            tools=[interaction_tool, kg_tool]  # Drug interactions + knowledge graph
+            tools=[neo4j_tool, scispacy_tool]  # Knowledge graph + NLP analysis
         )
 
         self.literature_agent = Agent(
@@ -118,7 +121,7 @@ class GrokDocCrew:
             verbose=True,
             allow_delegation=False,
             llm=self.literature_llm,
-            tools=[guideline_tool, kg_tool]  # Guidelines + knowledge graph validation
+            tools=[neo4j_tool, scispacy_tool]  # Knowledge graph + NLP for literature
         )
 
         self.arbiter_agent = Agent(
@@ -131,7 +134,7 @@ class GrokDocCrew:
             verbose=True,
             allow_delegation=True,
             llm=self.arbiter_llm,
-            tools=[kg_tool, lab_tool]  # Final validation + lab predictions
+            tools=[neo4j_tool, xgboost_tool, blockchain_tool]  # Final validation + lab predictions + audit logging
         )
 
         if self.use_radiology and self.radiology_llm:
@@ -145,7 +148,7 @@ class GrokDocCrew:
                 verbose=True,
                 allow_delegation=False,
                 llm=self.radiology_llm,
-                tools=[imaging_tool]  # Medical imaging analyzer
+                tools=[monai_tool, epic_tool]  # Medical imaging analyzer + Epic EHR integration
             )
 
     def create_tasks(
