@@ -24,6 +24,70 @@ faster-whisper==1.0.3          # Optimized Whisper inference (CTranslate2 backen
 # Note: faster-whisper is 4x faster and more memory efficient
 
 # ============================================================================
+# Multi-Agent Orchestration (crewai_agents.py)
+# ============================================================================
+crewai==0.41.1                 # Role-based AI agents for LLM chain coordination
+crewai-tools==0.8.3            # Additional tools for CrewAI agents
+pydantic==2.8.2                # Data validation for agent outputs
+
+# ============================================================================
+# Medical Imaging AI (medical_imaging.py)
+# ============================================================================
+monai==1.3.2                   # Medical Open Network for AI (radiology models)
+pydicom==2.4.4                 # DICOM file handling
+pillow==10.4.0                 # Image processing
+matplotlib==3.9.2              # Heatmap visualization
+nibabel==5.2.1                 # Neuroimaging file formats
+
+# ============================================================================
+# RPA Automation (epic_rpa.py, usb_watcher.py)
+# ============================================================================
+playwright==1.47.0             # Web automation for Epic Hyperspace
+pyautogui==0.9.54              # Desktop automation for Epic thick client
+pygetwindow==0.0.9             # Window management (Windows)
+python-docx==1.1.2             # Word document generation
+openpyxl==3.1.5                # Excel spreadsheet generation
+reportlab==4.2.2               # PDF generation
+PyPDF2==3.0.1                  # PDF text extraction
+
+# ============================================================================
+# Knowledge Graph Validation (knowledge_graph.py)
+# ============================================================================
+neo4j==5.23.0                  # Neo4j driver for medical knowledge graph
+py2neo==2021.2.4               # Alternative Neo4j Python library
+
+# ============================================================================
+# Predictive Lab Analytics (lab_predictions.py)
+# ============================================================================
+xgboost==2.1.1                 # Gradient boosting for lab predictions
+scikit-learn==1.5.1            # Machine learning utilities
+lightgbm==4.5.0                # Alternative gradient boosting (optional)
+
+# ============================================================================
+# Medical NLP (medical_nlp.py)
+# ============================================================================
+scispacy==0.5.4                # Medical NLP with spaCy
+spacy==3.7.5                   # Core spaCy library
+# Install scispaCy models separately:
+# pip install https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.3/en_core_sci_sm-0.5.3.tar.gz
+# pip install https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.3/en_ner_bc5cdr_md-0.5.3.tar.gz
+
+# ============================================================================
+# WebSocket Server & Real-Time Communication (websocket_server.py)
+# ============================================================================
+websockets==12.0               # WebSocket server for mobile connections
+pyjwt==2.8.0                   # JWT authentication for physicians
+cryptography==43.0.1           # JWT signing and encryption
+
+# ============================================================================
+# Blockchain & Distributed Ledger (blockchain_audit.py)
+# ============================================================================
+web3==6.20.0                   # Ethereum Web3.py for smart contracts
+ipfshttpclient==0.8.0a2        # IPFS for decentralized storage
+eth-account==0.11.2            # Ethereum account management
+eth-utils==4.1.0               # Ethereum utilities
+
+# ============================================================================
 # Vector Database & Retrieval (data_builder.py)
 # ============================================================================
 faiss-gpu==1.7.2               # GPU-accelerated similarity search (17k cases)
