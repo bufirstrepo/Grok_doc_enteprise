@@ -73,6 +73,21 @@ spacy==3.7.5                   # Core spaCy library
 # pip install https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.3/en_ner_bc5cdr_md-0.5.3.tar.gz
 
 # ============================================================================
+# WebSocket Server & Real-Time Communication (websocket_server.py)
+# ============================================================================
+websockets==12.0               # WebSocket server for mobile connections
+pyjwt==2.8.0                   # JWT authentication for physicians
+cryptography==43.0.1           # JWT signing and encryption
+
+# ============================================================================
+# Blockchain & Distributed Ledger (blockchain_audit.py)
+# ============================================================================
+web3==6.20.0                   # Ethereum Web3.py for smart contracts
+ipfshttpclient==0.8.0a2        # IPFS for decentralized storage
+eth-account==0.11.2            # Ethereum account management
+eth-utils==4.1.0               # Ethereum utilities
+
+# ============================================================================
 # Vector Database & Retrieval (data_builder.py)
 # ============================================================================
 faiss-gpu==1.7.2               # GPU-accelerated similarity search (17k cases)
