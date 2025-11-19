@@ -1,58 +1,88 @@
-streamlit>=1.28.0
-sentence-transformers>=2.2.2
-faiss-cpu>=1.7.4
-numpy>=1.24.0
-scipy>=1.11.0
-requests>=2.31.0
-pymc>=5.9.0
-arviz>=0.16.0
-```
+# Grok Doc v2.0 Requirements
+# Python 3.10+ (tested on 3.10.12)
+# CUDA 12.1+ for GPU acceleration
 
-5. Scroll down and click **Commit changes**
+# ============================================================================
+# Core Deep Learning Runtime
+# ============================================================================
+torch==2.4.1                    # PyTorch with CUDA 12.1 support for vLLM
+transformers==4.44.2            # HuggingFace transformers (stable for 3.10)
+sentence-transformers==3.0.1    # Semantic embeddings for case retrieval
 
----
+# ============================================================================
+# vLLM + AWQ Quantized Inference (local_inference.py)
+# ============================================================================
+vllm==0.6.1.post1              # Fast LLM inference engine
+autoawq==0.2.6                 # AWQ quantization (4-bit for 70B models)
+autoawq-kernels==0.0.7         # Optimized CUDA kernels for AWQ
 
-## Additional Quick Fixes (Optional but Recommended)
+# ============================================================================
+# Whisper Speech-to-Text (whisper_inference.py, mobile_note.py)
+# ============================================================================
+faster-whisper==1.0.3          # Optimized Whisper inference (CTranslate2 backend)
+# Alternative: openai-whisper==20231117 (slower but official)
+# Note: faster-whisper is 4x faster and more memory efficient
 
-### Step 6: Add a `.gitignore` File
+# ============================================================================
+# Vector Database & Retrieval (data_builder.py)
+# ============================================================================
+faiss-gpu==1.7.2               # GPU-accelerated similarity search (17k cases)
+# FALLBACK: Use faiss-cpu==1.8.0.post1 if no CUDA 11.4+
+# Install via: pip install faiss-cpu==1.8.0.post1
 
-You already have `.gitignore` content in your documents. Let's make sure it's in the repo:
+# ============================================================================
+# Bayesian Safety Engine (bayesian_engine.py)
+# ============================================================================
+pymc==5.16.2                   # Bayesian inference for prob_safe calculation
+arviz==0.18.0                  # Bayesian diagnostics and visualization
+numpy==1.26.4                  # Last version compatible with Python 3.10
+scipy==1.14.0                  # Scientific computing for Bayesian models
+pytensor==2.25.1               # PyMC computational backend
 
-1. Go to **Code** tab → **Add file** → **Create new file**
-2. Name it: `.gitignore`
-3. Paste this:
-```
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-venv/
-env/
-ENV/
+# ============================================================================
+# Streamlit UI (app.py)
+# ============================================================================
+streamlit==1.38.0              # Web interface framework
+streamlit-authenticator==0.3.3 # Authentication for physician sign-off
 
-# Generated data files (users create these locally)
-case_index.faiss
-cases_17k.jsonl
-audit.db
-audit_chain.jsonl
-merkle_chain.txt
+# ============================================================================
+# Audit & Cryptography (audit_log.py)
+# ============================================================================
+cryptography==43.0.1           # SHA-256 hashing, encryption for audit logs
+# Note: sqlite3 is built-in to Python, no installation needed
 
-# OS files
-.DS_Store
-Thumbs.db
+# ============================================================================
+# Data Processing & Utilities
+# ============================================================================
+pandas==2.2.2                  # Data manipulation for case database
+pyarrow==17.0.0                # Efficient columnar data format
+requests==2.32.5               # HTTP library for WiFi check
+tqdm==4.66.5                   # Progress bars for data_builder.py
+python-dotenv==1.0.1           # Environment variable management
+watchdog==4.0.2                # File monitoring for audit log backups
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
+# ============================================================================
+# Development & Testing
+# ============================================================================
+pytest==8.3.2                  # Testing framework (test_v2.py)
+black==24.8.0                  # Code formatter
+ruff==0.6.2                    # Fast Python linter
 
-# Logs
-*.log
-
-# Models (too large for git)
-models/
-*.bin
-*.safetensors
+# ============================================================================
+# Installation Notes
+# ============================================================================
+#
+# Quick Install (GPU with CUDA 12.1+):
+#   pip install -r requirements.txt
+#
+# CPU-Only Install (no GPU):
+#   1. Replace faiss-gpu with faiss-cpu in this file
+#   2. pip install -r requirements.txt
+#
+# Common Issues:
+#   - FAISS GPU fails: Install conda, then: conda install -c pytorch faiss-gpu
+#   - vLLM fails: Requires CUDA 11.8+ and compatible GPU drivers
+#   - PyMC slow: Normal on first import (compiles Theano graphs)
+#
+# Verify Installation:
+#   python -c "import vllm, faiss, pymc, streamlit; print('✓ All imports successful')"
