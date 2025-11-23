@@ -98,7 +98,7 @@ faiss-gpu==1.7.2               # GPU-accelerated similarity search (17k cases)
 # Bayesian Safety Engine (bayesian_engine.py)
 # ============================================================================
 pymc==5.16.2                   # Bayesian inference for prob_safe calculation
-arviz==0.18.0                  # Bayesian diagnostics and visualization
+arviz==0.22.0                  # Bayesian diagnostics and visualization
 numpy==1.26.4                  # Last version compatible with Python 3.10
 scipy==1.14.0                  # Scientific computing for Bayesian models
 pytensor==2.25.1               # PyMC computational backend
