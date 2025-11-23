@@ -123,7 +123,7 @@ pyarrow==17.0.0                # Efficient columnar data format
 requests==2.32.5               # HTTP library for WiFi check
 tqdm==4.66.5                   # Progress bars for data_builder.py
 python-dotenv==1.0.1           # Environment variable management
-watchdog==4.0.2                # File monitoring for audit log backups
+watchdog==6.0.0                # File monitoring for audit log backups
 
 # ============================================================================
 # Development & Testing
