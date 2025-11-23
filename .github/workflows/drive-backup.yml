@@ -1,0 +1,28 @@
+name: Daily Google Drive Backup
+
+on:
+  push:
+    branches: [ main ]
+  schedule:
+    - cron: '0 8 * * *'  # Every day at 8 AM UTC (adjust if you want)
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Create dated zip
+        run: |
+          zip -r Grok_doc_enteprise_${{ github.sha }}.zip . -x "*.git*"
+
+      - name: Upload to Google Drive
+        env:
+          DRIVE_URL: ${{ secrets.DRIVE_FOLDER_URL }}
+        run: |
+          FILE="Grok_doc_enteprise_$(date +'%Y%m%d_%H%M%S').zip"
+          mv Grok_doc_enteprise_${{ github.sha }}.zip $FILE
+          curl -L -o /tmp/upload https://git.io/file-upload.sh
+          chmod +x /tmp/upload
+          /tmp/upload "$FILE" "$DRIVE_URL"
