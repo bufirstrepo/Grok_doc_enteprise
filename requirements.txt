@@ -66,7 +66,7 @@ lightgbm==4.5.0                # Alternative gradient boosting (optional)
 # ============================================================================
 # Medical NLP (medical_nlp.py)
 # ============================================================================
-scispacy==0.5.4                # Medical NLP with spaCy
+scispacy==0.5.5                # Medical NLP with spaCy
 spacy==3.7.5                   # Core spaCy library
 # Install scispaCy models separately:
 # pip install https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.3/en_core_sci_sm-0.5.3.tar.gz
