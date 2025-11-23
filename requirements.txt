@@ -59,7 +59,7 @@ py2neo==2021.2.4               # Alternative Neo4j Python library
 # ============================================================================
 # Predictive Lab Analytics (lab_predictions.py)
 # ============================================================================
-xgboost==2.1.1                 # Gradient boosting for lab predictions
+xgboost==3.1.2                 # Gradient boosting for lab predictions
 scikit-learn==1.5.1            # Machine learning utilities
 lightgbm==4.5.0                # Alternative gradient boosting (optional)
 
