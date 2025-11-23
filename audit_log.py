@@ -24,16 +24,30 @@ def init_db():
             bayesian_prob REAL,
             latency REAL,
             analysis_mode TEXT DEFAULT 'fast',
+            model_name TEXT,
             prev_hash TEXT NOT NULL,
             entry_hash TEXT NOT NULL,
             UNIQUE(entry_hash)
         )
     """)
-    
+
+    # Create fallback events table for model routing audit
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS fallback_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            primary_model TEXT NOT NULL,
+            fallback_model TEXT,
+            exception_msg TEXT,
+            success BOOLEAN
+        )
+    """)
+
     # Create index for fast MRN lookups
     conn.execute("CREATE INDEX IF NOT EXISTS idx_mrn ON decisions(mrn)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_timestamp ON decisions(timestamp)")
-    
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_model ON decisions(model_name)")
+
     conn.commit()
     conn.close()
 
@@ -84,7 +98,8 @@ def log_decision(
     doctor: str,
     bayesian_prob: float,
     latency: float,
-    analysis_mode: str = "fast"  # NEW in v2.0: "fast" or "chain"
+    analysis_mode: str = "fast",  # NEW in v2.0: "fast" or "chain"
+    model_name: Optional[str] = None  # NEW: Track which model was used
 ) -> Dict:
     """
     Log a clinical decision to immutable audit trail.
@@ -109,24 +124,25 @@ def log_decision(
         "bayesian_prob": bayesian_prob,
         "latency": latency,
         "analysis_mode": analysis_mode,  # NEW in v2.0
+        "model_name": model_name,  # NEW: Model tracking
         "prev_hash": prev_hash
     }
-    
+
     # Compute hash (includes prev_hash for chain integrity)
     entry_hash = compute_entry_hash(entry)
     entry["hash"] = entry_hash
-    
+
     # Write to SQLite
     conn = sqlite3.connect(DB_PATH)
     try:
         conn.execute("""
             INSERT INTO decisions
             (timestamp, mrn, patient_context, doctor, question, labs, answer,
-             bayesian_prob, latency, analysis_mode, prev_hash, entry_hash)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             bayesian_prob, latency, analysis_mode, model_name, prev_hash, entry_hash)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             timestamp, mrn, patient_context, doctor, query, labs, response,
-            bayesian_prob, latency, analysis_mode, prev_hash, entry_hash
+            bayesian_prob, latency, analysis_mode, model_name, prev_hash, entry_hash
         ))
         conn.commit()
     except sqlite3.IntegrityError as e:
@@ -363,6 +379,86 @@ def verify_note_signature(note_text: str, signature: Dict) -> bool:
     expected_hash = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
 
     return expected_hash == signature['signature_hash']
+
+def log_fallback_event(
+    primary_model: str,
+    exception_msg: str,
+    fallback_model: Optional[str] = "llama-3.1-70b",
+    success: bool = False
+) -> Dict:
+    """
+    Log a model fallback event for tribunal experiments.
+
+    Args:
+        primary_model: The model that failed
+        exception_msg: The exception message
+        fallback_model: The fallback model used (if any)
+        success: Whether fallback succeeded
+
+    Returns:
+        dict: Logged event details
+    """
+    init_db()
+
+    timestamp = datetime.utcnow().isoformat() + "Z"
+
+    event = {
+        "timestamp": timestamp,
+        "primary_model": primary_model,
+        "fallback_model": fallback_model,
+        "exception_msg": exception_msg,
+        "success": success
+    }
+
+    # Write to SQLite
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        conn.execute("""
+            INSERT INTO fallback_events
+            (timestamp, primary_model, fallback_model, exception_msg, success)
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            timestamp, primary_model, fallback_model, exception_msg, success
+        ))
+        conn.commit()
+    finally:
+        conn.close()
+
+    print(f"⚠️  Fallback event logged: {primary_model} → {fallback_model}")
+
+    return event
+
+
+def get_fallback_statistics() -> Dict:
+    """
+    Get statistics on model fallback events.
+
+    Returns:
+        dict: Fallback statistics by model
+    """
+    init_db()
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.execute("""
+        SELECT primary_model, COUNT(*) as fallback_count,
+               SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as success_count
+        FROM fallback_events
+        GROUP BY primary_model
+    """)
+
+    stats = {}
+    for row in cursor.fetchall():
+        model, total, successes = row
+        stats[model] = {
+            "total_fallbacks": total,
+            "successful_fallbacks": successes,
+            "failed_fallbacks": total - successes
+        }
+
+    conn.close()
+
+    return stats
+
 
 # Initialize DB on import
 init_db()
