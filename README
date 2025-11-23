@@ -773,5 +773,5 @@ If using the multi-LLM chain in research:
 ---
 
 **Zero-cloud, hospital-native clinical decision support powered by local 70B LLM + Bayesian reasoning**
-
+[![Open in Cloud Shell Editor](https://gstatic.com/cloudssh/images/open-btn.svg)](https://ssh.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https://github.com/bufirstrepo/Grok_doc_enteprise.git)
 [Rest of your existing README content...]
