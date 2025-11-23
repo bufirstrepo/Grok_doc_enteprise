@@ -33,6 +33,16 @@ from whisper_inference import get_transcriber
 from crewai_agents import run_crewai_decision
 from soap_generator import SOAPGenerator
 from audit_log import log_decision
+from bayesian_engine import bayesian_safety_assessment
+
+# Import vector database components for case retrieval
+try:
+    import faiss
+    from sentence_transformers import SentenceTransformer
+    FAISS_AVAILABLE = True
+except ImportError:
+    FAISS_AVAILABLE = False
+    print("WARNING: faiss/sentence-transformers not installed for case retrieval")
 
 
 class MobileWebSocketServer:
@@ -72,6 +82,88 @@ class MobileWebSocketServer:
         # Initialize components
         self.transcriber = get_transcriber()
         self.soap_generator = SOAPGenerator()
+        
+        # Initialize vector database for case retrieval
+        self.vector_db_loaded = False
+        self.index = None
+        self.cases = []
+        self.embedder = None
+        self._load_vector_db()
+
+    def _load_vector_db(self):
+        """
+        Load FAISS index and case database for evidence retrieval
+        """
+        if not FAISS_AVAILABLE:
+            print("WARNING: FAISS not available. Case retrieval disabled.")
+            return
+        
+        try:
+            import os
+            index_path = "case_index.faiss"
+            cases_path = "cases_17k.jsonl"
+            
+            # Load sentence transformer
+            self.embedder = SentenceTransformer('all-MiniLM-L6-v2')
+            
+            # Create sample database if files don't exist
+            if not os.path.exists(index_path) or not os.path.exists(cases_path):
+                print("Creating sample case database...")
+                from data_builder import create_sample_database
+                create_sample_database(self.embedder)
+            
+            # Load FAISS index
+            self.index = faiss.read_index(index_path)
+            
+            # Load cases
+            with open(cases_path, 'r') as f:
+                for line in f:
+                    self.cases.append(json.loads(line))
+            
+            self.vector_db_loaded = True
+            print(f"✓ Loaded {len(self.cases)} clinical cases for retrieval")
+            
+        except Exception as e:
+            print(f"Failed to load vector database: {e}")
+            self.vector_db_loaded = False
+
+    def retrieve_similar_cases(self, query: str, patient_context: Dict, k: int = 100) -> list:
+        """
+        Retrieve similar cases from vector database
+        
+        Args:
+            query: Clinical question/query
+            patient_context: Patient demographics and labs
+            k: Number of cases to retrieve
+            
+        Returns:
+            List of similar case dictionaries
+        """
+        if not self.vector_db_loaded:
+            print("WARNING: Vector DB not loaded. Returning empty case list.")
+            return []
+        
+        try:
+            # Construct query text from question and patient context
+            labs = patient_context.get('labs', '')
+            query_text = f"{query} {labs}".strip()
+            
+            # Generate embedding
+            query_embedding = self.embedder.encode([query_text])
+            
+            # Search FAISS index
+            k = min(k, len(self.cases))
+            distances, indices = self.index.search(query_embedding, k)
+            
+            # Return retrieved cases
+            retrieved_cases = [self.cases[idx] for idx in indices[0]]
+            print(f"Retrieved {len(retrieved_cases)} similar cases")
+            
+            return retrieved_cases
+            
+        except Exception as e:
+            print(f"Error retrieving cases: {e}")
+            return []
 
     def generate_jwt(self, physician_id: str, expiry_hours: int = 8) -> str:
         """Generate JWT token for physician authentication"""
@@ -258,12 +350,25 @@ class MobileWebSocketServer:
                     'message': 'Synthesizing decision...'
                 }))
 
+                # Retrieve similar cases from vector database
+                retrieved_cases = self.retrieve_similar_cases(
+                    query=query,
+                    patient_context=patient_context,
+                    k=100
+                )
+                
+                # Calculate Bayesian safety assessment
+                bayesian_result = bayesian_safety_assessment(
+                    retrieved_cases=retrieved_cases,
+                    query_type="nephrotoxicity"
+                )
+
                 # Run actual decision (blocking - should be async)
                 result = run_crewai_decision(
                     patient_context=patient_context,
                     query=query,
-                    retrieved_cases=[],  # TODO: implement case retrieval
-                    bayesian_result={'prob_safe': 0.85, 'n_cases': 100}
+                    retrieved_cases=retrieved_cases,
+                    bayesian_result=bayesian_result
                 )
 
                 # Send final result

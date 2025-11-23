@@ -380,85 +380,93 @@ def verify_note_signature(note_text: str, signature: Dict) -> bool:
 
     return expected_hash == signature['signature_hash']
 
-def log_fallback_event(
-    primary_model: str,
-    exception_msg: str,
-    fallback_model: Optional[str] = "llama-3.1-70b",
-    success: bool = False
+def log_security_violation(
+    violation_type: str,
+    reason: str,
+    provenance: str = "unknown",
+    additional_data: Optional[Dict] = None
 ) -> Dict:
     """
-    Log a model fallback event for tribunal experiments.
+    Log security violations (e.g., hospital WiFi attestation failures) to audit trail.
 
     Args:
-        primary_model: The model that failed
-        exception_msg: The exception message
-        fallback_model: The fallback model used (if any)
-        success: Whether fallback succeeded
+        violation_type: Type of violation (e.g., "hospital_wifi_attestation_failed")
+        reason: Detailed reason for the violation
+        provenance: Source of the violation (e.g., "app_init", "periodic_check")
+        additional_data: Optional additional context
 
     Returns:
-        dict: Logged event details
+        Dict containing the logged violation with hash
     """
     init_db()
+
+    # Ensure security_violations table exists
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS security_violations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            violation_type TEXT NOT NULL,
+            reason TEXT NOT NULL,
+            provenance TEXT NOT NULL,
+            additional_data TEXT,
+            prev_hash TEXT NOT NULL,
+            entry_hash TEXT NOT NULL,
+            UNIQUE(entry_hash)
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_violation_type ON security_violations(violation_type)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_violation_timestamp ON security_violations(timestamp)")
+    conn.commit()
 
     timestamp = datetime.utcnow().isoformat() + "Z"
 
-    event = {
+    # Get last hash from security violations chain
+    cursor = conn.execute(
+        "SELECT entry_hash FROM security_violations ORDER BY id DESC LIMIT 1"
+    )
+    result = cursor.fetchone()
+    prev_hash = result[0] if result else "GENESIS_SECURITY_BLOCK"
+
+    # Create entry
+    entry = {
         "timestamp": timestamp,
-        "primary_model": primary_model,
-        "fallback_model": fallback_model,
-        "exception_msg": exception_msg,
-        "success": success
+        "violation_type": violation_type,
+        "reason": reason,
+        "provenance": provenance,
+        "additional_data": json.dumps(additional_data) if additional_data else None,
+        "prev_hash": prev_hash
     }
 
+    # Compute hash
+    hash_data = {k: v for k, v in entry.items() if k != "additional_data"}
+    canonical_json = json.dumps(hash_data, sort_keys=True, separators=(',', ':'))
+    entry_hash = hashlib.sha256(canonical_json.encode('utf-8')).hexdigest()
+    entry["hash"] = entry_hash
+
     # Write to SQLite
-    conn = sqlite3.connect(DB_PATH)
     try:
         conn.execute("""
-            INSERT INTO fallback_events
-            (timestamp, primary_model, fallback_model, exception_msg, success)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO security_violations
+            (timestamp, violation_type, reason, provenance, additional_data, prev_hash, entry_hash)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (
-            timestamp, primary_model, fallback_model, exception_msg, success
+            timestamp, violation_type, reason, provenance,
+            entry["additional_data"], prev_hash, entry_hash
         ))
         conn.commit()
+    except sqlite3.IntegrityError as e:
+        conn.close()
+        raise Exception(f"Duplicate security violation entry: {e}")
     finally:
         conn.close()
 
-    print(f"⚠️  Fallback event logged: {primary_model} → {fallback_model}")
+    # Append to security violations JSONL file
+    security_chain_file = "audit_security_violations.jsonl"
+    with open(security_chain_file, "a") as f:
+        f.write(json.dumps(entry) + "\n")
 
-    return event
-
-
-def get_fallback_statistics() -> Dict:
-    """
-    Get statistics on model fallback events.
-
-    Returns:
-        dict: Fallback statistics by model
-    """
-    init_db()
-
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.execute("""
-        SELECT primary_model, COUNT(*) as fallback_count,
-               SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as success_count
-        FROM fallback_events
-        GROUP BY primary_model
-    """)
-
-    stats = {}
-    for row in cursor.fetchall():
-        model, total, successes = row
-        stats[model] = {
-            "total_fallbacks": total,
-            "successful_fallbacks": successes,
-            "failed_fallbacks": total - successes
-        }
-
-    conn.close()
-
-    return stats
-
+    return entry
 
 # Initialize DB on import
 init_db()
