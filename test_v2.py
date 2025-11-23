@@ -345,5 +345,215 @@ class TestIntegration(unittest.TestCase):
         self.assertTrue(result['chain_export']['chain_verified'])
 
 
+class TestHardenedChain(unittest.TestCase):
+    """Test cases for hardened chain execution with timeouts and retries"""
+
+    def setUp(self):
+        """Set up test fixtures"""
+        self.patient_context = {
+            'age': 65,
+            'gender': 'Female',
+            'labs': 'Cr: 1.2, BUN: 22'
+        }
+        self.query = "Safe antibiotic for UTI?"
+        self.retrieved_cases = [
+            {'summary': 'UTI in elderly female'},
+            {'summary': 'Antibiotic safety profile'}
+        ]
+        self.bayesian_result = {
+            'prob_safe': 0.90,
+            'n_cases': 200,
+            'ci_low': 0.85,
+            'ci_high': 0.94
+        }
+
+    @patch('llm_chain.grok_query')
+    def test_stage_metadata_injection(self, mock_grok):
+        """Test that stage metadata is properly injected"""
+        mock_grok.return_value = "Test response"
+
+        chain = MultiLLMChain()
+        result = chain.run_chain(
+            self.patient_context,
+            self.query,
+            self.retrieved_cases,
+            self.bayesian_result
+        )
+
+        # Check that stage_metadata exists in result
+        self.assertIn('stage_metadata', result)
+
+        # Check metadata for all stages
+        for stage_name in ['kinetics', 'adversarial', 'literature', 'arbiter']:
+            self.assertIn(stage_name, result['stage_metadata'])
+            metadata = result['stage_metadata'][stage_name]
+
+            # Verify metadata structure
+            self.assertIn('stage_name', metadata)
+            self.assertIn('execution_time_ms', metadata)
+            self.assertIn('retry_count', metadata)
+            self.assertIn('timestamp', metadata)
+            self.assertIn('timeout_configured', metadata)
+            self.assertIn('max_retries_configured', metadata)
+
+            # Verify metadata values
+            self.assertEqual(metadata['stage_name'], stage_name)
+            self.assertGreaterEqual(metadata['execution_time_ms'], 0)
+            self.assertGreaterEqual(metadata['retry_count'], 0)
+
+    @patch('llm_chain.grok_query')
+    def test_performance_summary_in_export(self, mock_grok):
+        """Test that chain export includes performance summary"""
+        mock_grok.return_value = "Test response"
+
+        chain = MultiLLMChain()
+        chain.run_chain(
+            self.patient_context,
+            self.query,
+            self.retrieved_cases,
+            self.bayesian_result
+        )
+
+        export = chain.export_chain()
+
+        # Check performance summary exists
+        self.assertIn('performance_summary', export)
+        perf = export['performance_summary']
+
+        # Check performance summary structure
+        self.assertIn('total_execution_time_ms', perf)
+        self.assertIn('stage_timings', perf)
+        self.assertIn('retries', perf)
+
+        # Verify all stages are tracked
+        for stage_name in ['kinetics', 'adversarial', 'literature', 'arbiter']:
+            self.assertIn(stage_name, perf['stage_timings'])
+            self.assertIn(stage_name, perf['retries'])
+
+        # Total execution time should be sum of stage timings
+        total = perf['total_execution_time_ms']
+        stage_sum = sum(perf['stage_timings'].values())
+        self.assertAlmostEqual(total, stage_sum, places=2)
+
+    @patch('llm_chain.grok_query')
+    def test_stage_results_with_contracts(self, mock_grok):
+        """Test that stage results follow the StageResult contract"""
+        mock_grok.return_value = "Test recommendation with risk of adverse events"
+
+        chain = MultiLLMChain()
+        chain.run_chain(
+            self.patient_context,
+            self.query,
+            self.retrieved_cases,
+            self.bayesian_result
+        )
+
+        # Check that stage_results are stored
+        self.assertEqual(len(chain.stage_results), 4)
+
+        # Verify each stage result follows the contract
+        for stage_name, result in chain.stage_results.items():
+            # Check all required fields exist
+            self.assertIn('recommendation', result)
+            self.assertIn('confidence', result)
+            self.assertIn('reasoning', result)
+            self.assertIn('contraindications', result)
+            self.assertIn('timestamp', result)
+            self.assertIn('stage_name', result)
+            self.assertIn('_stage_metadata', result)
+
+            # Verify field types
+            self.assertIsInstance(result['recommendation'], str)
+            self.assertIsInstance(result['confidence'], float)
+            self.assertIsInstance(result['reasoning'], str)
+            self.assertIsInstance(result['contraindications'], list)
+            self.assertIsInstance(result['timestamp'], str)
+            self.assertIsInstance(result['stage_name'], str)
+            self.assertIsInstance(result['_stage_metadata'], dict)
+
+            # Confidence should be between 0 and 1
+            self.assertGreaterEqual(result['confidence'], 0.0)
+            self.assertLessEqual(result['confidence'], 1.0)
+
+    @patch('llm_chain.grok_query')
+    def test_retry_logic_on_failure(self, mock_grok):
+        """Test that stages retry on failure"""
+        # First call fails, second succeeds
+        mock_grok.side_effect = [
+            Exception("Temporary failure"),
+            "Success response",  # Kinetics retry
+            "Adversarial response",
+            "Literature response",
+            "Arbiter response"
+        ]
+
+        chain = MultiLLMChain()
+        result = chain.run_chain(
+            self.patient_context,
+            self.query,
+            self.retrieved_cases,
+            self.bayesian_result
+        )
+
+        # Chain should complete successfully
+        self.assertEqual(result['total_steps'], 4)
+
+        # Kinetics should show 1 retry
+        kinetics_metadata = result['stage_metadata']['kinetics']
+        self.assertEqual(kinetics_metadata['retry_count'], 1)
+
+    @patch('llm_chain.grok_query')
+    def test_contraindications_parsing(self, mock_grok):
+        """Test that contraindications are extracted from responses"""
+        mock_grok.side_effect = [
+            "Kinetics: Dose 500mg. Caution with renal impairment.",
+            "Adversarial: Risk of QT prolongation. Avoid in cardiac patients.",
+            "Literature: Warning about drug interactions with warfarin.",
+            "Arbiter: Final recommendation. Monitor for contraindications."
+        ]
+
+        chain = MultiLLMChain()
+        chain.run_chain(
+            self.patient_context,
+            self.query,
+            self.retrieved_cases,
+            self.bayesian_result
+        )
+
+        # Check that contraindications were extracted
+        for stage_name in ['kinetics', 'adversarial', 'literature', 'arbiter']:
+            result = chain.stage_results[stage_name]
+            self.assertGreater(len(result['contraindications']), 0)
+
+    @patch('llm_chain.grok_query')
+    def test_weighted_confidence_calculation(self, mock_grok):
+        """Test that arbiter uses weighted confidence from all stages"""
+        mock_grok.return_value = "Test response"
+
+        chain = MultiLLMChain()
+        result = chain.run_chain(
+            self.patient_context,
+            self.query,
+            self.retrieved_cases,
+            self.bayesian_result
+        )
+
+        # Get individual stage confidences
+        kinetics_conf = chain.stage_results['kinetics']['confidence']
+        adversarial_conf = chain.stage_results['adversarial']['confidence']
+        literature_conf = chain.stage_results['literature']['confidence']
+
+        # Expected weighted average: 30% kinetics + 20% adversarial + 50% literature
+        expected_confidence = (
+            kinetics_conf * 0.3 +
+            adversarial_conf * 0.2 +
+            literature_conf * 0.5
+        )
+
+        # Check arbiter confidence matches
+        arbiter_conf = chain.stage_results['arbiter']['confidence']
+        self.assertAlmostEqual(arbiter_conf, expected_confidence, places=2)
+
+
 if __name__ == '__main__':
     unittest.main()
