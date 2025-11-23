@@ -169,9 +169,35 @@ class MedicalFileHandler(FileSystemEventHandler):
 
                 print(f"Lab data saved to: {results_file}")
 
-                # TODO: Trigger XGBoost predictions
-                # from lab_predictions import predict_creatinine_24h
-                # prediction = predict_creatinine_24h(lab_values)
+                # Trigger XGBoost predictions for creatinine
+                try:
+                    from lab_predictions import CreatininePredictor
+                    
+                    # Initialize predictor (untrained model for demo)
+                    predictor = CreatininePredictor()
+                    
+                    # Run prediction if creatinine is present
+                    if 'creatinine' in lab_values.get('labs', {}):
+                        prediction = predictor.predict_creatinine_24h(lab_values)
+                        
+                        print(f"XGBoost Prediction:")
+                        print(f"  Baseline Cr: {prediction['baseline_cr']}")
+                        print(f"  Predicted Cr (24h): {prediction['predicted_cr']}")
+                        print(f"  AKI Risk: {prediction['aki_risk']}")
+                        
+                        # Save prediction results
+                        prediction_file = server_file.with_name(
+                            server_file.stem + '_prediction.json'
+                        )
+                        with open(prediction_file, 'w') as f:
+                            json.dump(prediction, f, indent=2)
+                        
+                        print(f"Prediction saved to: {prediction_file}")
+                        
+                except ImportError:
+                    print("XGBoost not available - skipping predictions")
+                except Exception as e:
+                    print(f"Error running XGBoost prediction: {e}")
 
             self.stats['lab_files'] += 1
 
@@ -203,16 +229,42 @@ class MedicalFileHandler(FileSystemEventHandler):
                 text = self._extract_pdf_text(server_file)
                 print(f"Extracted {len(text)} characters from PDF")
 
-                # TODO: Run scispaCy NLP
-                # from medical_nlp import extract_medical_entities
-                # entities = extract_medical_entities(text)
-
                 # Save text
                 text_file = server_file.with_suffix('.txt')
                 with open(text_file, 'w') as f:
                     f.write(text)
 
                 print(f"Text saved to: {text_file}")
+
+                # Run scispaCy NLP for medical entity extraction
+                try:
+                    from medical_nlp import MedicalNLPProcessor
+                    
+                    # Initialize scispaCy processor
+                    nlp_processor = MedicalNLPProcessor()
+                    
+                    # Extract medical entities
+                    entities = nlp_processor.extract_entities(text)
+                    
+                    print(f"scispaCy NLP Results:")
+                    print(f"  Diseases: {len(entities['diseases'])}")
+                    print(f"  Drugs: {len(entities['drugs'])}")
+                    print(f"  Procedures: {len(entities['procedures'])}")
+                    print(f"  Total entities: {len(entities['all_entities'])}")
+                    
+                    # Save entity extraction results
+                    entities_file = server_file.with_name(
+                        server_file.stem + '_entities.json'
+                    )
+                    with open(entities_file, 'w') as f:
+                        json.dump(entities, f, indent=2)
+                    
+                    print(f"Entities saved to: {entities_file}")
+                    
+                except ImportError:
+                    print("scispaCy not available - skipping NLP extraction")
+                except Exception as e:
+                    print(f"Error running scispaCy NLP: {e}")
 
             self.stats['pdf_files'] += 1
 
