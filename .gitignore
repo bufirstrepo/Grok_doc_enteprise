@@ -15,6 +15,10 @@ audit.db
 audit_chain.jsonl
 merkle_chain.txt
 
+# Authentication database (contains sensitive credentials)
+data/
+physician_auth.db
+
 # OS files
 .DS_Store
 Thumbs.db

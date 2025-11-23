@@ -13,6 +13,8 @@ Result: Documentation time drops from 15-40 min → under 2 minutes
 
 import streamlit as st
 import os
+import hashlib
+import sqlite3
 from datetime import datetime
 from whisper_inference import get_transcriber
 from llm_chain import run_multi_llm_decision
@@ -55,6 +57,46 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# ── AUTHENTICATION FUNCTIONS ──────────────────────────────────────
+def init_auth_db():
+    """Create physician authentication database"""
+    # Ensure data directory exists
+    os.makedirs('data', exist_ok=True)
+
+    conn = sqlite3.connect('data/physician_auth.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS physicians
+                 (physician_id TEXT PRIMARY KEY,
+                  password_hash TEXT NOT NULL,
+                  full_name TEXT NOT NULL,
+                  npi_number TEXT,
+                  last_login TIMESTAMP)''')
+    conn.commit()
+    conn.close()
+
+def verify_physician(physician_id: str, password: str) -> bool:
+    """Verify physician credentials against database"""
+    conn = sqlite3.connect('data/physician_auth.db')
+    c = conn.cursor()
+
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    c.execute('SELECT password_hash FROM physicians WHERE physician_id = ?', (physician_id,))
+    result = c.fetchone()
+
+    if result and result[0] == password_hash:
+        # Update last login timestamp
+        c.execute('UPDATE physicians SET last_login = ? WHERE physician_id = ?',
+                  (datetime.now(), physician_id))
+        conn.commit()
+        conn.close()
+        return True
+
+    conn.close()
+    return False
+
+# Initialize authentication database
+init_auth_db()
+
 st.title("🩺 Grok Doc Mobile")
 st.caption("📱 Voice-to-SOAP Clinical Co-Pilot")
 
@@ -63,10 +105,68 @@ if "transcript" not in st.session_state:
     st.session_state.transcript = ""
 if "soap_result" not in st.session_state:
     st.session_state.soap_result = None
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
 if "physician_id" not in st.session_state:
-    st.session_state.physician_id = "mobile_doc"  # Replace with real auth
+    st.session_state.physician_id = None
 if "patient_mrn" not in st.session_state:
     st.session_state.patient_mrn = ""
+
+# ── AUTHENTICATION CHECK ──────────────────────────────────────────
+if not st.session_state.authenticated:
+    st.title("🔒 Physician Authentication")
+    st.caption("Secure login required for mobile clinical co-pilot")
+
+    with st.form("login_form"):
+        physician_id = st.text_input("Physician ID", placeholder="Enter your physician ID")
+        password = st.text_input("Password", type="password", placeholder="Enter your password")
+        submit = st.form_submit_button("🔑 Login", use_container_width=True)
+
+        if submit:
+            if physician_id and password:
+                if verify_physician(physician_id, password):
+                    st.session_state.authenticated = True
+                    st.session_state.physician_id = physician_id
+                    st.success("✅ Authentication successful")
+                    st.rerun()
+                else:
+                    st.error("❌ Invalid credentials. Please try again.")
+            else:
+                st.warning("⚠️ Please enter both Physician ID and Password")
+
+    # Information for first-time setup
+    with st.expander("ℹ️ First-time setup?"):
+        st.markdown("""
+        **For administrators:**
+
+        To add a new physician to the system, use the following script:
+
+        ```python
+        import sqlite3
+        import hashlib
+
+        physician_id = "DR001"
+        password = "your_secure_password"
+        full_name = "Dr. Jane Smith"
+        npi_number = "1234567890"
+
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
+
+        conn = sqlite3.connect('data/physician_auth.db')
+        c = conn.cursor()
+        c.execute('''INSERT INTO physicians
+                     (physician_id, password_hash, full_name, npi_number)
+                     VALUES (?, ?, ?, ?)''',
+                  (physician_id, password_hash, full_name, npi_number))
+        conn.commit()
+        conn.close()
+        ```
+
+        **Security Note:** For production deployment, integrate with your hospital's
+        LDAP/Active Directory system for enterprise authentication.
+        """)
+
+    st.stop()  # Don't show the rest of the app until authenticated
 
 # ── STEP 1: PATIENT CONTEXT ───────────────────────────────────────
 with st.expander("📋 Patient Info (Optional)", expanded=False):
