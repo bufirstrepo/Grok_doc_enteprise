@@ -45,7 +45,7 @@ nibabel==5.2.1                 # Neuroimaging file formats
 playwright==1.47.0             # Web automation for Epic Hyperspace
 pyautogui==0.9.54              # Desktop automation for Epic thick client
 pygetwindow==0.0.9             # Window management (Windows)
-python-docx==1.1.2             # Word document generation
+python-docx==1.2.0             # Word document generation
 openpyxl==3.1.5                # Excel spreadsheet generation
 reportlab==4.2.2               # PDF generation
 PyPDF2==3.0.1                  # PDF text extraction
