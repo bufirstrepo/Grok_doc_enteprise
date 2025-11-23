@@ -1,16 +1,17 @@
-# CLAUDE.md - AI Assistant Guide for Grok_doc_enteprise v2.0
+# CLAUDE.md - AI Assistant Guide for Grok_doc_enteprise v2.5
 
 ## Repository Overview
 
-This repository implements **Grok Doc v2.0**, a complete on-premises clinical AI system with dual-mode operation:
+This repository implements **Grok Doc v2.5**, a complete on-premises clinical AI system with:
 - **Fast Mode (v1.0)**: Single-LLM decision support with Bayesian analysis
 - **Chain Mode (v2.0)**: Multi-LLM adversarial reasoning chain for critical decisions
+- **Model Routing (v2.5)**: Explicit multi-model support for tribunal experiments (NEW!)
 
 **Repository**: `Grok_doc_enteprise`
 **Primary Language**: Python
 **Domain**: Clinical decision support, pharmacokinetics, medical AI
-**Architecture**: Dual-mode system with multi-agent LLM chain + cryptographic verification
-**Version**: 2.0.0
+**Architecture**: Dual-mode system with multi-agent LLM chain + cryptographic verification + explicit model routing
+**Version**: 2.5.0
 
 ---
 
@@ -20,10 +21,12 @@ This repository implements **Grok Doc v2.0**, a complete on-premises clinical AI
 Grok_doc_enteprise/
 ├── Core Application Files
 │   ├── app.py                    # Streamlit UI with Fast/Chain mode toggle (v2.0)
-│   ├── llm_chain.py              # 4-stage multi-LLM reasoning chain (NEW in v2.0)
-│   ├── local_inference.py        # vLLM inference engine (70B LLM)
+│   ├── llm_chain.py              # 4-stage multi-LLM reasoning chain (updated for v2.5)
+│   ├── local_inference.py        # Central model routing system (NEW in v2.5)
+│   ├── vllm_engine.py            # vLLM backend for high-performance models (NEW in v2.5)
+│   ├── transformers_backend.py   # HuggingFace Transformers backend (NEW in v2.5)
 │   ├── bayesian_engine.py        # Bayesian safety assessment
-│   ├── audit_log.py              # Blockchain-style immutable logging (updated for v2.0)
+│   ├── audit_log.py              # Blockchain-style immutable logging (updated for v2.5)
 │   └── data_builder.py           # Synthetic case database generator (17k cases)
 │
 ├── Mobile Co-Pilot (NEW in v2.0 - Voice-to-SOAP Documentation)
@@ -37,7 +40,8 @@ Grok_doc_enteprise/
 │   └── requirements.txt          # Python dependencies
 │
 ├── Testing
-│   └── test_v2.py                # Test suite for multi-LLM chain (NEW in v2.0)
+│   ├── test_v2.py                # Test suite for multi-LLM chain (NEW in v2.0)
+│   └── test_model_routing.py     # Test suite for model routing system (NEW in v2.5)
 │
 ├── Documentation
 │   ├── README.md                 # User-facing documentation (v2.0)
@@ -90,12 +94,13 @@ analysis_mode = st.radio(
 - Fast Mode logic (line ~220)
 - Chain Mode logic (line ~147)
 
-### 2. `llm_chain.py` - Multi-LLM Chain (v2.0)
-**Lines**: 167 | **Purpose**: Four-stage adversarial reasoning chain
+### 2. `llm_chain.py` - Multi-LLM Chain (v2.5 Updated)
+**Lines**: 302 | **Purpose**: Four-stage adversarial reasoning chain with per-step model selection
 
 **Classes**:
-- `ChainStep` (dataclass): Single step with cryptographic hash
-- `MultiLLMChain` (class): Orchestrates 4-model chain
+- `ChainStep` (dataclass): Single step with cryptographic hash + model tracking
+  - NEW in v2.5: `model_name` field tracks which model was used
+- `MultiLLMChain` (class): Orchestrates 4-model chain with optional model configuration
 
 **Four-Stage Chain**:
 1. **Kinetics Model** (`_run_kinetics_model()` line 63)
@@ -124,19 +129,201 @@ analysis_mode = st.radio(
 - SHA-256 of `{step, prompt, response, prev_hash}`
 - Verification: `verify_chain()` at line 147
 
-### 3. `local_inference.py` - LLM Engine
-**Lines**: ~290 | **Purpose**: vLLM-based 70B model inference
+### 3. Model Routing System (v2.5 - NEW!)
+**Purpose**: Explicit model selection for tribunal experiments and multi-model chains
 
-**Key Function**:
-```python
-def grok_query(prompt: str, max_tokens: int = 500) -> str:
-    """Query local LLM using vLLM engine"""
+This is the **CRITICAL NEW FEATURE** that enables provable, auditable model comparison experiments.
+
+**Key Files**:
+- `local_inference.py` - Central model routing (360 lines)
+- `vllm_engine.py` - vLLM backend for high-performance models (230 lines)
+- `transformers_backend.py` - HuggingFace Transformers backend (210 lines)
+
+**Architecture Overview**:
+```
+┌─────────────────────────────────────────────────────────┐
+│              local_inference.py                         │
+│  CURRENT_MODEL = "llama-3.1-70b"  ← Single source of   │
+│                                      truth              │
+│  grok_query(prompt, model_name=None) ← Explicit routing│
+│         │                                               │
+│         ├──→ vllm_engine.py                             │
+│         │    ├── grok-4                                 │
+│         │    ├── llama-3.1-70b                          │
+│         │    └── mixtral-8x22b                          │
+│         │                                               │
+│         └──→ transformers_backend.py                    │
+│              ├── deepseek-r1                            │
+│              └── deepseek-r1-distill-llama-70b          │
+└─────────────────────────────────────────────────────────┘
 ```
 
+**Supported Models**:
+| Model | Backend | Use Case |
+|-------|---------|----------|
+| `grok-4` | vLLM | High-performance reasoning (if available) |
+| `llama-3.1-70b` | vLLM | Default production model (70B, AWQ quantized) |
+| `mixtral-8x22b` | vLLM | Alternative high-capacity model |
+| `deepseek-r1` | Transformers | Extended reasoning with CoT |
+| `deepseek-r1-distill-llama-70b` | Transformers | Distilled version for efficiency |
+| `claude-3.5-sonnet` | (Future) | Local Claude proxy when available |
+
+**Key Design Principles**:
+1. **Single Source of Truth**: `CURRENT_MODEL` in `local_inference.py` is the ONLY default
+2. **Explicit Routing**: Every call can override with `model_name` parameter
+3. **Full Provenance**: Model name logged in audit trail + chain export
+4. **Auditable Fallback**: Fallback events logged to `fallback_events` table
+5. **LRU Caching**: Up to 5 models can be held in memory simultaneously
+
+**Usage Examples**:
+
+*Example 1: Simple model override*
+```python
+from local_inference import grok_query
+
+# Use default model
+response = grok_query("What is vancomycin's MOA?")
+
+# Use specific model
+response = grok_query("What is vancomycin's MOA?", model_name="deepseek-r1")
+```
+
+*Example 2: Multi-model tribunal experiment*
+```python
+from local_inference import grok_query
+
+prompt = "For 72M patient with Cr 1.8, is vancomycin 1500mg q12h safe?"
+
+models = ["llama-3.1-70b", "deepseek-r1", "mixtral-8x22b"]
+results = {}
+
+for model in models:
+    response = grok_query(prompt, model_name=model)
+    results[model] = response
+    # Each response logged with model_name in audit trail
+```
+
+*Example 3: Per-step model selection in chain*
+```python
+from llm_chain import run_multi_llm_decision
+
+models_config = {
+    "kinetics": "llama-3.1-70b",      # Fast PK calculations
+    "adversarial": "deepseek-r1",     # Extended reasoning for risks
+    "literature": "mixtral-8x22b",    # Diverse evidence synthesis
+    "arbiter": "llama-3.1-70b"        # Final decision
+}
+
+result = run_multi_llm_decision(
+    patient_context, query, cases, bayesian,
+    models_config=models_config
+)
+
+# Result includes model_name for each step:
+# result['chain_steps'][0]['model'] == "llama-3.1-70b"
+# result['chain_steps'][1]['model'] == "deepseek-r1"
+```
+
+**Environment Configuration**:
+```bash
+# Set default model
+export GROK_DEFAULT_MODEL="llama-3.1-70b"
+
+# Set model paths
+export LLAMA_MODEL_PATH="/models/llama-3.1-70b-instruct-awq"
+export DEEPSEEK_MODEL_PATH="/models/deepseek-r1"
+export MIXTRAL_MODEL_PATH="/models/mixtral-8x22b-instruct-awq"
+
+# Warmup on startup
+export WARMUP_MODEL="true"
+```
+
+**Fallback Handling**:
+- Primary model failure → logged to `fallback_events` table
+- Automatic fallback to `llama-3.1-70b` (if not already using it)
+- Both failure and fallback success logged for auditing
+- Query `get_fallback_statistics()` for model reliability metrics
+
+**Testing**:
+```bash
+python test_model_routing.py
+```
+
+Tests:
+1. Model listing and status
+2. Explicit model selection
+3. Fallback logging
+4. Multi-model chain
+5. Tribunal experiments
+
+### 4. `local_inference.py` - Central Model Routing
+**Lines**: 360 | **Purpose**: Central model selection and routing
+
+**Key Components**:
+
+*CURRENT_MODEL (Line 18)*:
+```python
+CURRENT_MODEL: Literal[
+    "grok-4", "claude-3.5-sonnet", "deepseek-r1",
+    "deepseek-r1-distill-llama-70b", "llama-3.1-70b", "mixtral-8x22b"
+] = os.getenv("GROK_DEFAULT_MODEL", "llama-3.1-70b")
+```
+
+*get_llm() Factory (Line 48)*:
+```python
+@lru_cache(maxsize=5)
+def get_llm(model_name: Optional[str] = None) -> Dict:
+    """
+    Returns: {
+        "type": "vllm" | "transformers" | "claude_proxy",
+        "name": model_name,
+        "engine": backend_instance
+    }
+    """
+```
+
+*grok_query() with Routing (Line 110)*:
+```python
+def grok_query(
+    prompt: str,
+    temperature: float = 0.0,
+    max_tokens: int = 2048,
+    model_name: Optional[str] = None,  # ← Explicit model override
+    system_prompt: Optional[str] = None,
+    stream: bool = False
+) -> str:
+    """Primary inference entry point with model routing"""
+```
+
+**Important**: All existing code continues to work unchanged. The `model_name` parameter is optional.
+
+### 5. `vllm_engine.py` - vLLM Backend (NEW)
+**Lines**: 230 | **Purpose**: High-performance vLLM inference
+
+**Key Functions**:
+- `get_vllm_engine(model_name)` - Load vLLM model (cached)
+- `query_vllm(engine, prompt, ...)` - Run inference
+- `get_vllm_status(model_name)` - Check model status
+- `warmup_vllm(model_name)` - Preload model
+
 **Performance**:
-- Uses AWQ quantization (4-bit)
+- AWQ 4-bit quantization
+- Tensor parallelism (up to 4 GPUs)
 - DGX Spark (8× H100): ~2s per call
 - 4× A100: ~3.8s per call
+
+### 6. `transformers_backend.py` - Transformers Backend (NEW)
+**Lines**: 210 | **Purpose**: HuggingFace Transformers support
+
+**Key Functions**:
+- `get_deepseek_pipeline(model_name)` - Load Transformers model
+- `query_transformers(pipeline, prompt, ...)` - Run inference
+- `get_transformers_status(model_name)` - Check model status
+
+**Features**:
+- 8-bit quantization (bitsandbytes)
+- Auto device mapping
+- Supports models not yet in vLLM (DeepSeek-R1)
 
 ### 4. `bayesian_engine.py` - Safety Assessment
 **Lines**: ~335 | **Purpose**: Bayesian probability of safety
@@ -160,10 +347,10 @@ def bayesian_safety_assessment(
 
 **Uses**: PyMC for Bayesian inference
 
-### 5. `audit_log.py` - Immutable Logging (v2.0 Updated)
-**Lines**: ~235 | **Purpose**: Blockchain-style tamper-evident logging
+### 7. `audit_log.py` - Immutable Logging (v2.5 Updated)
+**Lines**: ~465 | **Purpose**: Blockchain-style tamper-evident logging with model tracking
 
-**Database Schema** (v2.0):
+**Database Schema** (v2.5):
 ```sql
 CREATE TABLE decisions (
     id INTEGER PRIMARY KEY,
@@ -176,16 +363,29 @@ CREATE TABLE decisions (
     answer TEXT,
     bayesian_prob REAL,
     latency REAL,
-    analysis_mode TEXT,     -- NEW in v2.0: "fast" or "chain"
+    analysis_mode TEXT,     -- "fast" or "chain"
+    model_name TEXT,        -- NEW in v2.5: Model used for inference
     prev_hash TEXT,
     entry_hash TEXT
+)
+
+-- NEW in v2.5: Fallback event tracking for model reliability
+CREATE TABLE fallback_events (
+    id INTEGER PRIMARY KEY,
+    timestamp TEXT,
+    primary_model TEXT,     -- Model that failed
+    fallback_model TEXT,    -- Fallback model used
+    exception_msg TEXT,     -- Error message
+    success BOOLEAN         -- Whether fallback succeeded
 )
 ```
 
 **Key Functions**:
-- `log_decision()` - Logs with e-signature (line 77)
-- `verify_audit_integrity()` - Checks hash chain (line 169)
-- `export_audit_trail()` - Export for compliance (line 201)
+- `log_decision()` - Logs with e-signature and model tracking (line 92)
+- `verify_audit_integrity()` - Checks hash chain (line 144)
+- `export_audit_trail()` - Export for compliance (line 247)
+- `log_fallback_event()` - NEW v2.5: Log model fallback (line 383)
+- `get_fallback_statistics()` - NEW v2.5: Query fallback stats (line 432)
 
 **Hash Chaining**:
 ```python

@@ -25,6 +25,7 @@ class ChainStep:
     prev_hash: str
     step_hash: str
     confidence: Optional[float] = None
+    model_name: Optional[str] = None  # NEW: Track which model was used
 
 class MultiLLMChain:
     """Orchestrates multiple LLM calls in sequence for robust clinical reasoning."""
@@ -43,27 +44,80 @@ class MultiLLMChain:
         """Get hash of previous step in chain"""
         return self.chain_history[-1].step_hash if self.chain_history else self.genesis_hash
     
-    def run_chain(self, patient_context: Dict, query: str, retrieved_evidence: List[Dict], bayesian_result: Dict) -> Dict:
-        """Execute the full 4-LLM decision chain."""
+    def run_chain(
+        self,
+        patient_context: Dict,
+        query: str,
+        retrieved_evidence: List[Dict],
+        bayesian_result: Dict,
+        models_config: Optional[Dict[str, str]] = None
+    ) -> Dict:
+        """
+        Execute the full 4-LLM decision chain.
+
+        Args:
+            patient_context: Patient information dict
+            query: Clinical question
+            retrieved_evidence: List of retrieved cases
+            bayesian_result: Bayesian analysis results
+            models_config: Optional dict mapping step names to model names:
+                {
+                    "kinetics": "llama-3.1-70b",
+                    "adversarial": "deepseek-r1",
+                    "literature": "claude-3.5-sonnet",
+                    "arbiter": "llama-3.1-70b"
+                }
+
+        Returns:
+            dict: Chain execution results
+        """
         self.chain_history = []
-        
-        kinetics_result = self._run_kinetics_model(patient_context, query, retrieved_evidence, bayesian_result)
-        adversarial_result = self._run_adversarial_model(patient_context, query, kinetics_result)
-        literature_result = self._run_literature_model(patient_context, query, kinetics_result, adversarial_result)
-        final_result = self._run_arbiter_model(patient_context, query, kinetics_result, adversarial_result, literature_result)
-        
+
+        # Use default None if no config provided (uses CURRENT_MODEL)
+        config = models_config or {}
+
+        kinetics_result = self._run_kinetics_model(
+            patient_context, query, retrieved_evidence, bayesian_result,
+            model_name=config.get("kinetics")
+        )
+        adversarial_result = self._run_adversarial_model(
+            patient_context, query, kinetics_result,
+            model_name=config.get("adversarial")
+        )
+        literature_result = self._run_literature_model(
+            patient_context, query, kinetics_result, adversarial_result,
+            model_name=config.get("literature")
+        )
+        final_result = self._run_arbiter_model(
+            patient_context, query, kinetics_result, adversarial_result, literature_result,
+            model_name=config.get("arbiter")
+        )
+
         return {
-            "chain_steps": [{"step": s.step_name, "response": s.response, "hash": s.step_hash, "confidence": s.confidence} for s in self.chain_history],
+            "chain_steps": [{
+                "step": s.step_name,
+                "response": s.response,
+                "hash": s.step_hash,
+                "confidence": s.confidence,
+                "model": s.model_name
+            } for s in self.chain_history],
             "final_recommendation": final_result["response"],
             "final_confidence": final_result["confidence"],
             "chain_hash": self.chain_history[-1].step_hash,
             "total_steps": len(self.chain_history)
         }
     
-    def _run_kinetics_model(self, patient_context: Dict, query: str, evidence: List[Dict], bayesian: Dict) -> ChainStep:
+    def _run_kinetics_model(
+        self,
+        patient_context: Dict,
+        query: str,
+        evidence: List[Dict],
+        bayesian: Dict,
+        model_name: Optional[str] = None
+    ) -> ChainStep:
         """LLM #1: Kinetics Model"""
         evidence_summary = "\n".join([f"- {case.get('summary', 'N/A')}" for case in evidence[:10]])
-        
+
         prompt = f"""You are a clinical pharmacologist focused ONLY on pharmacokinetics.
 
 PATIENT: Age: {patient_context.get('age')}, Gender: {patient_context.get('gender')}, Labs: {patient_context.get('labs', 'Not provided')}
@@ -73,13 +127,25 @@ CASES: {evidence_summary}
 
 TASK: Provide ONLY pharmacokinetic calculation and dose recommendation. 2 sentences max."""
 
-        response = grok_query(prompt, max_tokens=200)
-        step = ChainStep("Kinetics Model", prompt, response, datetime.utcnow().isoformat() + "Z", self._get_last_hash(), "", bayesian['prob_safe'])
+        response = grok_query(prompt, max_tokens=200, model_name=model_name)
+        step = ChainStep(
+            "Kinetics Model", prompt, response,
+            datetime.utcnow().isoformat() + "Z",
+            self._get_last_hash(), "",
+            bayesian['prob_safe'],
+            model_name
+        )
         step.step_hash = self._compute_step_hash(step.step_name, step.prompt, step.response, step.prev_hash)
         self.chain_history.append(step)
         return step
     
-    def _run_adversarial_model(self, patient_context: Dict, query: str, kinetics_step: ChainStep) -> ChainStep:
+    def _run_adversarial_model(
+        self,
+        patient_context: Dict,
+        query: str,
+        kinetics_step: ChainStep,
+        model_name: Optional[str] = None
+    ) -> ChainStep:
         """LLM #2: Adversarial Model"""
         prompt = f"""You are a PARANOID anesthesiologist reviewing a colleague's recommendation.
 
@@ -89,13 +155,26 @@ COLLEAGUE'S REC: {kinetics_step.response}
 
 TASK: Find ANY reason this could harm the patient. Focus on drug interactions, comorbidities, edge cases. 2-3 sentences."""
 
-        response = grok_query(prompt, max_tokens=250)
-        step = ChainStep("Adversarial Model", prompt, response, datetime.utcnow().isoformat() + "Z", self._get_last_hash(), "", None)
+        response = grok_query(prompt, max_tokens=250, model_name=model_name)
+        step = ChainStep(
+            "Adversarial Model", prompt, response,
+            datetime.utcnow().isoformat() + "Z",
+            self._get_last_hash(), "",
+            None,
+            model_name
+        )
         step.step_hash = self._compute_step_hash(step.step_name, step.prompt, step.response, step.prev_hash)
         self.chain_history.append(step)
         return step
     
-    def _run_literature_model(self, patient_context: Dict, query: str, kinetics_step: ChainStep, adversarial_step: ChainStep) -> ChainStep:
+    def _run_literature_model(
+        self,
+        patient_context: Dict,
+        query: str,
+        kinetics_step: ChainStep,
+        adversarial_step: ChainStep,
+        model_name: Optional[str] = None
+    ) -> ChainStep:
         """LLM #3: Literature Model"""
         prompt = f"""You are a clinical researcher with latest medical literature.
 
@@ -105,13 +184,27 @@ RISKS: {adversarial_step.response}
 
 TASK: Provide evidence from recent studies (2023-2025). What do trials suggest? Safer alternatives? 2-3 sentences."""
 
-        response = grok_query(prompt, max_tokens=300)
-        step = ChainStep("Literature Model", prompt, response, datetime.utcnow().isoformat() + "Z", self._get_last_hash(), "", 0.90)
+        response = grok_query(prompt, max_tokens=300, model_name=model_name)
+        step = ChainStep(
+            "Literature Model", prompt, response,
+            datetime.utcnow().isoformat() + "Z",
+            self._get_last_hash(), "",
+            0.90,
+            model_name
+        )
         step.step_hash = self._compute_step_hash(step.step_name, step.prompt, step.response, step.prev_hash)
         self.chain_history.append(step)
         return step
     
-    def _run_arbiter_model(self, patient_context: Dict, query: str, kinetics_step: ChainStep, adversarial_step: ChainStep, literature_step: ChainStep) -> Dict:
+    def _run_arbiter_model(
+        self,
+        patient_context: Dict,
+        query: str,
+        kinetics_step: ChainStep,
+        adversarial_step: ChainStep,
+        literature_step: ChainStep,
+        model_name: Optional[str] = None
+    ) -> Dict:
         """LLM #4: Arbiter Model"""
         prompt = f"""You are the attending making the FINAL decision.
 
@@ -125,13 +218,19 @@ INPUTS:
 
 TASK: Synthesize into clear recommendation. Format: "Recommendation: [action] / Safety: [%] / Rationale: [why] / Monitor: [what]" 4 sentences max."""
 
-        response = grok_query(prompt, max_tokens=300)
+        response = grok_query(prompt, max_tokens=300, model_name=model_name)
         final_confidence = (kinetics_step.confidence or 0.8) * 0.3 + 0.85 * 0.2 + (literature_step.confidence or 0.9) * 0.5
-        
-        step = ChainStep("Arbiter Model", prompt, response, datetime.utcnow().isoformat() + "Z", self._get_last_hash(), "", final_confidence)
+
+        step = ChainStep(
+            "Arbiter Model", prompt, response,
+            datetime.utcnow().isoformat() + "Z",
+            self._get_last_hash(), "",
+            final_confidence,
+            model_name
+        )
         step.step_hash = self._compute_step_hash(step.step_name, step.prompt, step.response, step.prev_hash)
         self.chain_history.append(step)
-        
+
         return {"step": step, "response": step.response, "confidence": final_confidence}
     
     def export_chain(self) -> Dict:
@@ -139,7 +238,15 @@ TASK: Synthesize into clear recommendation. Format: "Recommendation: [action] / 
         return {
             "chain_id": self.chain_history[-1].step_hash if self.chain_history else None,
             "genesis_hash": self.genesis_hash,
-            "steps": [{"step_name": s.step_name, "response": s.response, "timestamp": s.timestamp, "hash": s.step_hash, "prev_hash": s.prev_hash, "confidence": s.confidence} for s in self.chain_history],
+            "steps": [{
+                "step_name": s.step_name,
+                "response": s.response,
+                "timestamp": s.timestamp,
+                "hash": s.step_hash,
+                "prev_hash": s.prev_hash,
+                "confidence": s.confidence,
+                "model_name": s.model_name
+            } for s in self.chain_history],
             "total_steps": len(self.chain_history),
             "chain_verified": self.verify_chain()
         }
@@ -158,9 +265,37 @@ TASK: Synthesize into clear recommendation. Format: "Recommendation: [action] / 
             expected_prev_hash = step.step_hash
         return True
 
-def run_multi_llm_decision(patient_context: Dict, query: str, retrieved_cases: List[Dict], bayesian_result: Dict) -> Dict:
-    """Run complete multi-LLM decision chain."""
+def run_multi_llm_decision(
+    patient_context: Dict,
+    query: str,
+    retrieved_cases: List[Dict],
+    bayesian_result: Dict,
+    models_config: Optional[Dict[str, str]] = None
+) -> Dict:
+    """
+    Run complete multi-LLM decision chain with optional per-step model selection.
+
+    Args:
+        patient_context: Patient information dict
+        query: Clinical question
+        retrieved_cases: List of retrieved cases
+        bayesian_result: Bayesian analysis results
+        models_config: Optional dict mapping step names to model names
+
+    Returns:
+        dict: Complete chain results with audit export
+
+    Example:
+        # Use different models for each step
+        models = {
+            "kinetics": "llama-3.1-70b",
+            "adversarial": "deepseek-r1",
+            "literature": "mixtral-8x22b",
+            "arbiter": "llama-3.1-70b"
+        }
+        result = run_multi_llm_decision(context, query, cases, bayesian, models)
+    """
     chain = MultiLLMChain()
-    result = chain.run_chain(patient_context, query, retrieved_cases, bayesian_result)
+    result = chain.run_chain(patient_context, query, retrieved_cases, bayesian_result, models_config)
     result["chain_export"] = chain.export_chain()
     return result
