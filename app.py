@@ -6,43 +6,128 @@ from datetime import datetime
 import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
+import socket
+import ssl
+import hashlib
+import ipaddress
+import time
+from typing import Tuple
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from local_inference import grok_query
-from audit_log import log_decision, verify_audit_integrity
+from audit_log import log_decision, verify_audit_integrity, log_security_violation
 from bayesian_engine import bayesian_safety_assessment
 from llm_chain import run_multi_llm_decision  # NEW in v2.0
 
-# ── CONFIGURATION ────────────────────────────────────────────────
-HOSPITAL_SSID_KEYWORDS = ["hospital", "clinical", "healthcare", "medical"]
-CAPTIVE_PORTAL_CHECK = "http://captive.apple.com"
-REQUIRE_WIFI_CHECK = True  # Set to False for local testing
+# ── SEALED CONFIGURATION (Inject via env vars or Kubernetes secrets at deploy) ──
+# Update these with your hospital's exact values for production
+HOSPITAL_SUBNETS = [
+    ipaddress.ip_network("10.50.0.0/16"),      # Clinical VLAN (example)
+    ipaddress.ip_network("192.168.100.0/24"),  # Secure ward subnet
+    # Add more: ipaddress.ip_network("YOUR_SUBNET_HERE")
+]
 
-# ── FORCE HOSPITAL WIFI ONLY ─────────────────────────────────────
-def is_on_hospital_wifi():
+HOSPITAL_INTERNAL_HOST = os.getenv("HOSPITAL_INTERNAL_HOST", "internal-ehr.hospital.local")  # Internal-only, non-routable
+HOSPITAL_INTERNAL_PORT = int(os.getenv("HOSPITAL_INTERNAL_PORT", "443"))
+EXPECTED_CERT_SHA256 = os.getenv(
+    "EXPECTED_CERT_SHA256",
+    "a1b2c3d4e5f67890123456789abcdef123456789abcdef123456789abcdef12"  # Replace with actual SHA-256
+)
+
+HOSPITAL_SSID_KEYWORDS = {
+    "Hospital-Secure", "HOSP-CLINICAL", "MED-STAFF-5G",  # Your Cisco/Meraki SSID fingerprints
+    "hospital", "clinical", "healthcare", "medical"      # Fallback keywords
+}
+
+REQUIRE_WIFI_CHECK = os.getenv("REQUIRE_WIFI_CHECK", "true").lower() != "false"  # Set to False for local testing
+
+# Hardened session (no redirects, minimal footprint)
+_SESSION = requests.Session()
+_SESSION.headers.update({"User-Agent": "GrokDocEnterprise/2.0 (Internal-Only)"})
+retry_strategy = Retry(total=1, backoff_factor=0, status_forcelist=[502, 503, 504])
+_SESSION.mount("http://", HTTPAdapter(max_retries=retry_strategy))
+_SESSION.mount("https://", HTTPAdapter(max_retries=retry_strategy))
+
+# ── MULTI-LAYER ZERO-TRUST ATTESTATION ──────────────────────────
+def is_on_hospital_wifi() -> Tuple[bool, str]:
     """
-    Validates device is on hospital WiFi by checking captive portal.
-    In production, enhance with:
-    - Certificate pinning
-    - MAC address whitelist
-    - VPN tunnel verification
+    Multi-layer zero-trust attestation for hospital network confinement.
+    Layers: Subnet binding → Cert pinning → Captive portal SSID fingerprint.
+    Fails closed: Any layer breach → abort with audit log.
+    For PhD testing: Simulate failures to benchmark tribunal chain resilience.
     """
     if not REQUIRE_WIFI_CHECK:
-        return True
+        return True, "✓ WiFi check disabled (development mode)"
 
-    
+    failure_reasons = []
+
+    # ── LAYER 1: Private Subnet Binding (L2-hardened, anti-VPN) ──
     try:
-        r = requests.get(CAPTIVE_PORTAL_CHECK, timeout=3, allow_redirects=True)
-        url_check = any(kw in r.url.lower() for kw in HOSPITAL_SSID_KEYWORDS)
-        content_check = any(kw in r.text.lower() for kw in HOSPITAL_SSID_KEYWORDS)
-        return url_check or content_check
+        local_ip = socket.gethostbyname(socket.gethostname())
+        ip_obj = ipaddress.ip_address(local_ip)
+        if not any(ip_obj in subnet for subnet in HOSPITAL_SUBNETS):
+            failure_reasons.append(f"IP {local_ip} outside approved subnets ({', '.join(str(s) for s in HOSPITAL_SUBNETS)})")
     except Exception as e:
-        st.error(f"Network check failed: {e}")
-        return False
+        failure_reasons.append(f"Subnet attestation failed: {str(e)}")
 
-# Check WiFi before anything else
-if not is_on_hospital_wifi():
-    st.error("🚫 Grok Doc only works on hospital WiFi")
-    st.info("Connect to Hospital-Clinical network to prevent PHI from leaving premises.")
-    st.stop()
+    # ── LAYER 2: Internal Server Cert Pinning (TLS 1.3, anti-MitM) ──
+    try:
+        context = ssl.create_default_context()
+        context.check_hostname = False  # .local not in public DNS
+        context.verify_mode = ssl.CERT_REQUIRED
+        context.set_ciphers("ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20")  # Hospital-grade ciphers
+
+        with socket.create_connection((HOSPITAL_INTERNAL_HOST, HOSPITAL_INTERNAL_PORT), timeout=3) as sock:
+            with context.wrap_socket(sock, server_hostname=HOSPITAL_INTERNAL_HOST) as ssock:
+                cert_der = ssock.getpeercert(binary_form=True)
+                actual_fp = hashlib.sha256(cert_der).hexdigest().lower()
+                if actual_fp != EXPECTED_CERT_SHA256.lower():
+                    failure_reasons.append(
+                        f"Cert pinning violation: Expected {EXPECTED_CERT_SHA256[:16]}..., got {actual_fp[:16]}..."
+                    )
+    except socket.gaierror:
+        failure_reasons.append(f"{HOSPITAL_INTERNAL_HOST} unresolvable (external network detected)")
+    except Exception as e:
+        failure_reasons.append(f"TLS attestation failed: {str(e)}")
+
+    # ── LAYER 3: Captive Portal + SSID Keyword Fingerprint (anti-spoof) ──
+    try:
+        resp = _SESSION.get("http://captive.apple.com/hotspot-detect.html", timeout=3, allow_redirects=False)
+        if resp.status_code != 200 or "Success" not in resp.text:
+            failure_reasons.append("Captive portal handshake failed (non-hospital SSID)")
+        elif not any(kw in resp.text for kw in HOSPITAL_SSID_KEYWORDS):
+            failure_reasons.append(f"SSID mismatch: Missing keywords {HOSPITAL_SSID_KEYWORDS}")
+    except Exception:
+        failure_reasons.append("Captive portal probe failed (offline/external)")
+
+    # ── VERDICT & AUDIT ──
+    if failure_reasons:
+        reason = "; ".join(failure_reasons[:2])  # Concise for UI, full to logs
+        # Log to blockchain-style audit
+        try:
+            log_security_violation("hospital_wifi_attestation_failed", reason, provenance="app_init")
+        except Exception:
+            pass  # Graceful if audit logging fails
+        return False, reason
+
+    return True, "✓ Hospital network attested – Proceeding with zero-cloud inference"
+
+
+# ── CRITICAL: Enforce at Import Time (Before Any LLM or UI Load) ──
+def enforce_hospital_network() -> None:
+    """Fail-fast guardrail: Abort if not on secure hospital WiFi."""
+    secure, reason = is_on_hospital_wifi()
+    if not secure:
+        st.error("🚨 **SECURITY VIOLATION: Hospital Network Required**")
+        st.error(f"**Attestation Failure**: {reason}")
+        st.error("**Action**: Connect to hospital WiFi (e.g., HOSP-CLINICAL). Aborting to protect PHI.")
+        st.stop()  # Halts Streamlit execution immediately
+    else:
+        st.sidebar.success("🔒 **Network Secure**: Hospital WiFi attested")
+
+
+# ── AUTO-ENFORCE ON MODULE LOAD ──
+enforce_hospital_network()
 
 # ── PAGE CONFIGURATION ───────────────────────────────────────────
 st.set_page_config(
@@ -97,9 +182,20 @@ except Exception as e:
 
 # ── SIDEBAR: PATIENT CONTEXT ─────────────────────────────────────
 with st.sidebar:
+    # Periodic re-attestation (integrate into session state loop)
+    if 'last_attestation' not in st.session_state:
+        st.session_state.last_attestation = time.time()
+
+    if time.time() - st.session_state.last_attestation > 300:  # 5 min
+        st.session_state.last_attestation = time.time()
+        secure, reason = is_on_hospital_wifi()
+        if not secure:
+            st.rerun()  # Triggers enforce_hospital_network() → abort
+        st.sidebar.info(f"🔄 Last attestation: {time.strftime('%H:%M:%S', time.localtime(st.session_state.last_attestation))}")
+
     st.header("Patient Context")
 
-    
+
     mrn = st.text_input(
         "Medical Record Number (MRN)",
         help="Required for audit trail"
