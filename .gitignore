@@ -12,6 +12,7 @@ ENV/
 case_index.faiss
 cases_17k.jsonl
 audit.db
+alerts.db
 audit_chain.jsonl
 merkle_chain.txt
 
