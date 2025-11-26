@@ -40,5 +40,5 @@ pydantic==2.8.2                # Data validation
 # Utilities
 # ============================================================================
 tqdm==4.66.5                   # Progress bars
-python-dotenv==1.0.1           # Environment variables
+python-dotenv==1.2.1           # Environment variables
 urllib3==2.2.2                 # HTTP client
