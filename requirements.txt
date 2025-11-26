@@ -28,7 +28,7 @@ faiss-cpu==1.8.0.post1         # CPU-based similarity search
 # ============================================================================
 # Authentication & Security
 # ============================================================================
-pyjwt==2.8.0                   # JWT authentication
+pyjwt==2.10.1                   # JWT authentication
 cryptography==43.0.1           # Encryption for audit logs
 
 # ============================================================================
