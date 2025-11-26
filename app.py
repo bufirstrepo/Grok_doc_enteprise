@@ -80,11 +80,14 @@ def is_on_hospital_wifi() -> Tuple[bool, str]:
         with socket.create_connection((HOSPITAL_INTERNAL_HOST, HOSPITAL_INTERNAL_PORT), timeout=3) as sock:
             with context.wrap_socket(sock, server_hostname=HOSPITAL_INTERNAL_HOST) as ssock:
                 cert_der = ssock.getpeercert(binary_form=True)
-                actual_fp = hashlib.sha256(cert_der).hexdigest().lower()
-                if actual_fp != EXPECTED_CERT_SHA256.lower():
-                    failure_reasons.append(
-                        f"Cert pinning violation: Expected {EXPECTED_CERT_SHA256[:16]}..., got {actual_fp[:16]}..."
-                    )
+                if cert_der is None:
+                    failure_reasons.append("No certificate returned from server")
+                else:
+                    actual_fp = hashlib.sha256(cert_der).hexdigest().lower()
+                    if actual_fp != EXPECTED_CERT_SHA256.lower():
+                        failure_reasons.append(
+                            f"Cert pinning violation: Expected {EXPECTED_CERT_SHA256[:16]}..., got {actual_fp[:16]}..."
+                        )
     except socket.gaierror:
         failure_reasons.append(f"{HOSPITAL_INTERNAL_HOST} unresolvable (external network detected)")
     except Exception as e:
@@ -151,9 +154,6 @@ def load_vector_db():
 
     embedder = SentenceTransformer('all-MiniLM-L6-v2')
 
-    
-    embedder = SentenceTransformer('all-MiniLM-L6-v2')
-    
     # Create sample data if files don't exist
     if not os.path.exists(index_path) or not os.path.exists(cases_path):
         st.warning("Creating sample case database for demo purposes...")
@@ -162,15 +162,11 @@ def load_vector_db():
 
     index = faiss.read_index(index_path)
 
-    
-    index = faiss.read_index(index_path)
-    
     cases = []
     with open(cases_path, 'r') as f:
         for line in f:
             cases.append(json.loads(line))
 
-    
     return index, cases, embedder
 
 try:
@@ -204,10 +200,6 @@ with st.sidebar:
     age = st.slider("Age", 0, 120, 72)
     gender = st.selectbox("Gender", ["Male", "Female", "Other"])
 
-    
-    age = st.slider("Age", 0, 120, 72)
-    gender = st.selectbox("Gender", ["Male", "Female", "Other"])
-    
     chief = st.text_area(
         "Chief complaint / Clinical question",
         value="72 yo male, septic shock on vancomycin, Cr 2.9 → 1.8. Safe trough?",
@@ -236,9 +228,6 @@ with st.sidebar:
 
     st.divider()
 
-    
-    st.divider()
-    
     col1, col2 = st.columns(2)
     with col1:
         submit = st.button("🔍 Analyze", type="primary", use_container_width=True)

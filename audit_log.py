@@ -468,5 +468,68 @@ def log_security_violation(
 
     return entry
 
+
+def log_fallback_event(
+    primary_model: str,
+    exception_msg: str,
+    fallback_model: str = "llama-3.1-70b"
+) -> bool:
+    """
+    Log model fallback events for reliability tracking.
+
+    Args:
+        primary_model: The model that failed
+        exception_msg: Error message from the failure
+        fallback_model: The model used as fallback
+
+    Returns:
+        True if logged successfully, False otherwise
+    """
+    init_db()
+
+    timestamp = datetime.utcnow().isoformat() + "Z"
+
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        conn.execute("""
+            INSERT INTO fallback_events
+            (timestamp, primary_model, fallback_model, exception_msg, success)
+            VALUES (?, ?, ?, ?, ?)
+        """, (timestamp, primary_model, fallback_model, exception_msg, True))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Failed to log fallback event: {e}")
+        return False
+    finally:
+        conn.close()
+
+
+def get_fallback_statistics() -> Dict:
+    """
+    Get statistics about model fallback events.
+
+    Returns:
+        Dict with fallback statistics by model
+    """
+    init_db()
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.execute("""
+        SELECT primary_model, COUNT(*) as count
+        FROM fallback_events
+        GROUP BY primary_model
+        ORDER BY count DESC
+    """)
+
+    stats = {row[0]: row[1] for row in cursor.fetchall()}
+    conn.close()
+
+    return {
+        "total_fallbacks": sum(stats.values()),
+        "by_model": stats
+    }
+
+
 # Initialize DB on import
 init_db()

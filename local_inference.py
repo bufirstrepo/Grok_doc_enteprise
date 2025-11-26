@@ -9,20 +9,26 @@ All model selection flows through CURRENT_MODEL or explicit model_name parameter
 """
 
 from functools import lru_cache
-from typing import Literal, Optional, Dict
+from typing import Literal, Optional, Dict, cast
 import os
 
 # ── CENTRAL MODEL SELECTOR ───────────────────────────────────────
 # This is the ONLY place you change the default model for the entire system
 
-CURRENT_MODEL: Literal[
+ModelType = Literal[
     "grok-4",
     "claude-3.5-sonnet",
     "deepseek-r1",
     "deepseek-r1-distill-llama-70b",
     "llama-3.1-70b",
     "mixtral-8x22b"
-] = os.getenv("GROK_DEFAULT_MODEL", "llama-3.1-70b")  # Default to llama-3.1-70b
+]
+
+_default_model = os.getenv("GROK_DEFAULT_MODEL", "llama-3.1-70b")
+CURRENT_MODEL: ModelType = cast(ModelType, _default_model) if _default_model in [
+    "grok-4", "claude-3.5-sonnet", "deepseek-r1",
+    "deepseek-r1-distill-llama-70b", "llama-3.1-70b", "mixtral-8x22b"
+] else "llama-3.1-70b"
 
 
 # ── MODEL BACKEND MAPPING ────────────────────────────────────────
