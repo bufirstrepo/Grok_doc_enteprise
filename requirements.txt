@@ -150,3 +150,14 @@ ruff==0.6.2                    # Fast Python linter
 #
 # Verify Installation:
 #   python -c "import vllm, faiss, pymc, streamlit; print('✓ All imports successful')"
+crewai
+faiss-cpu
+numpy
+pandas
+pydantic
+pyjwt
+requests
+sentence-transformers
+streamlit
+torch
+urllib3

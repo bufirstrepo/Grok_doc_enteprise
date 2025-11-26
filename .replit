@@ -6,3 +6,35 @@ integrations = ["github:1.0.0"]
 [nix]
 channel = "stable-25_05"
 packages = ["cargo", "glibcLocales", "libiconv", "libxcrypt", "openssl", "pkg-config", "rustc", "xsimd"]
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Grok Doc App"
+
+[[workflows.workflow]]
+name = "Grok Doc App"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "REQUIRE_WIFI_CHECK=false streamlit run app.py --server.port 5000 --server.address 0.0.0.0 --server.headless true"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 38673
+externalPort = 3000
