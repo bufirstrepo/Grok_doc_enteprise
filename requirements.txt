@@ -10,7 +10,7 @@ streamlit==1.38.0              # Web interface framework
 # Data Processing
 # ============================================================================
 pandas==2.2.2                  # Data manipulation
-numpy==1.26.4                  # Numerical computing
+numpy==2.3.5                  # Numerical computing
 requests==2.32.5               # HTTP library
 
 # ============================================================================
