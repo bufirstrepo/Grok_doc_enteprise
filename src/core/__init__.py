@@ -1,5 +1,5 @@
 """Core Grok Doc Engine Components"""
-from .grok_backend import GrokAPIBackend
+from .grok_backend import GrokAPIBackend, CloudDisabledError, GrokResponse
 from .kinetics_enhanced import EnhancedKineticsEngine
 from .adversarial_stage import AdversarialStage, AdversarialInput, AdversarialResult, run_adversarial_analysis
 from .continuous_learning import (
@@ -84,6 +84,8 @@ from .access_control import (
 
 __all__ = [
     'GrokAPIBackend',
+    'CloudDisabledError',
+    'GrokResponse',
     'EnhancedKineticsEngine',
     'AdversarialStage',
     'AdversarialInput',

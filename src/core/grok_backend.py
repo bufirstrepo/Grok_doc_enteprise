@@ -3,6 +3,15 @@ Grok API Backend
 
 HIPAA-compliant integration with xAI's Grok API.
 Requires Business Associate Agreement (BAA) for PHI processing.
+
+IMPORTANT: This backend is DISABLED BY DEFAULT for HIPAA compliance.
+To enable, you MUST:
+1. Sign a Business Associate Agreement (BAA) with xAI
+2. Set GROK_HAS_BAA=true environment variable
+3. Set GROK_CLOUD_ENABLED=true environment variable
+
+Without these safeguards, the system operates in LOCAL-ONLY mode to prevent
+accidental PHI transmission to cloud services.
 """
 
 import os
@@ -11,6 +20,11 @@ import time
 from typing import Dict, Optional, List, Any
 from dataclasses import dataclass
 from datetime import datetime
+
+
+class CloudDisabledError(Exception):
+    """Raised when cloud API is called without proper authorization"""
+    pass
 
 
 @dataclass
@@ -28,9 +42,15 @@ class GrokAPIBackend:
     """
     HIPAA-compliant Grok API backend.
     
-    IMPORTANT: Only use this backend if:
-    1. You have signed a BAA with xAI
-    2. GROK_HAS_BAA environment variable is set to 'true'
+    SECURITY: This backend has a HARD SAFEGUARD to prevent PHI transmission.
+    
+    To use cloud Grok API, you MUST:
+    1. Sign a BAA with xAI
+    2. Set GROK_HAS_BAA=true
+    3. Set GROK_CLOUD_ENABLED=true (explicit opt-in)
+    
+    Without GROK_CLOUD_ENABLED=true, all API calls will raise CloudDisabledError.
+    This ensures 100% on-premises operation by default.
     
     Usage:
         backend = GrokAPIBackend()
@@ -64,6 +84,7 @@ class GrokAPIBackend:
         self.base_url = base_url
         self._session = None
         self._baa_confirmed = os.getenv('GROK_HAS_BAA', 'false').lower() == 'true'
+        self._cloud_enabled = os.getenv('GROK_CLOUD_ENABLED', 'false').lower() == 'true'
     
     def _get_session(self):
         """Get or create HTTP session"""
@@ -83,6 +104,15 @@ class GrokAPIBackend:
         """Check if API key is configured"""
         return self.api_key is not None
     
+    def is_cloud_enabled(self) -> bool:
+        """
+        Check if cloud API is explicitly enabled.
+        
+        Returns True only if GROK_CLOUD_ENABLED=true.
+        This is an additional safeguard beyond BAA confirmation.
+        """
+        return self._cloud_enabled
+    
     def is_hipaa_ready(self) -> bool:
         """
         Check if Grok is ready for HIPAA-compliant use.
@@ -90,23 +120,31 @@ class GrokAPIBackend:
         Returns True only if:
         1. API key is configured
         2. BAA confirmation flag is set
+        3. Cloud is explicitly enabled
         """
-        return self.is_configured() and self._baa_confirmed
+        return self.is_configured() and self._baa_confirmed and self._cloud_enabled
     
     def get_hipaa_status(self) -> Dict[str, Any]:
         """Get detailed HIPAA compliance status"""
+        if self.is_hipaa_ready():
+            message = "Ready for HIPAA-compliant cloud use"
+        elif not self.is_configured():
+            message = "Cloud DISABLED: API key not configured (local inference only)"
+        elif not self._baa_confirmed:
+            message = "Cloud DISABLED: BAA not confirmed (set GROK_HAS_BAA=true after signing)"
+        elif not self._cloud_enabled:
+            message = "Cloud DISABLED: Explicit opt-in required (set GROK_CLOUD_ENABLED=true)"
+        else:
+            message = "Cloud DISABLED: Configuration error"
+            
         return {
             'api_key_configured': self.is_configured(),
             'baa_confirmed': self._baa_confirmed,
+            'cloud_enabled': self._cloud_enabled,
             'hipaa_ready': self.is_hipaa_ready(),
             'model': self.model,
-            'message': (
-                "Ready for HIPAA-compliant use" if self.is_hipaa_ready()
-                else "NOT ready: " + (
-                    "API key not configured" if not self.is_configured()
-                    else "BAA not confirmed (set GROK_HAS_BAA=true after signing with xAI)"
-                )
-            )
+            'mode': 'cloud' if self.is_hipaa_ready() else 'local_only',
+            'message': message
         }
     
     def query(
@@ -131,8 +169,22 @@ class GrokAPIBackend:
             GrokResponse object
             
         Raises:
-            RuntimeError: If not HIPAA ready or API error
+            CloudDisabledError: If cloud API is not explicitly enabled
+            RuntimeError: If API key not configured or API error
         """
+        if not self._cloud_enabled:
+            raise CloudDisabledError(
+                "Cloud API is DISABLED for HIPAA compliance. "
+                "To enable, set GROK_CLOUD_ENABLED=true and GROK_HAS_BAA=true "
+                "after signing a BAA with xAI. Use local inference instead."
+            )
+        
+        if not self._baa_confirmed:
+            raise CloudDisabledError(
+                "Cloud API blocked: BAA not confirmed. "
+                "Set GROK_HAS_BAA=true only after signing a BAA with xAI."
+            )
+        
         if not self.is_configured():
             raise RuntimeError("Grok API key not configured")
         

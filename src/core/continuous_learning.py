@@ -3,18 +3,82 @@ Continuous Learning Pipeline for Grok Doc v2.5
 
 Captures clinical outcomes, compares predicted vs actual results,
 updates Bayesian priors based on new evidence, and tracks model calibration.
+
+Zero external dependencies - uses standard library only for on-premises deployment.
 """
 
 import sqlite3
 import json
 import hashlib
+import math
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field, asdict
 from enum import Enum
 
-from scipy.stats import beta as beta_dist
-import numpy as np
+
+def _beta_mean(alpha: float, beta: float) -> float:
+    """Beta distribution mean: alpha / (alpha + beta)"""
+    return alpha / (alpha + beta)
+
+
+def _beta_variance(alpha: float, beta: float) -> float:
+    """Beta distribution variance"""
+    return (alpha * beta) / ((alpha + beta) ** 2 * (alpha + beta + 1))
+
+
+def _beta_ppf_approx(p: float, alpha: float, beta: float) -> float:
+    """
+    Approximate Beta distribution PPF (percent point function / inverse CDF).
+    
+    Uses Normal approximation for reasonable alpha, beta values.
+    For clinical safety with alpha, beta > 1, this gives adequate precision.
+    """
+    if alpha <= 0 or beta <= 0:
+        raise ValueError("alpha and beta must be positive")
+    
+    if p <= 0:
+        return 0.0
+    if p >= 1:
+        return 1.0
+    
+    mean = _beta_mean(alpha, beta)
+    var = _beta_variance(alpha, beta)
+    std = math.sqrt(var)
+    
+    z = _norm_ppf_approx(p)
+    x = mean + z * std
+    
+    return max(0.0, min(1.0, x))
+
+
+def _norm_ppf_approx(p: float) -> float:
+    """
+    Approximate Normal distribution PPF (inverse CDF).
+    
+    Uses Abramowitz and Stegun approximation (formula 26.2.23).
+    Accurate to about 4.5e-4.
+    """
+    if p <= 0:
+        return -10.0
+    if p >= 1:
+        return 10.0
+    
+    if p < 0.5:
+        return -_norm_ppf_approx(1 - p)
+    
+    t = math.sqrt(-2.0 * math.log(1 - p))
+    
+    c0 = 2.515517
+    c1 = 0.802853
+    c2 = 0.010328
+    d1 = 1.432788
+    d2 = 0.189269
+    d3 = 0.001308
+    
+    z = t - (c0 + c1 * t + c2 * t * t) / (1 + d1 * t + d2 * t * t + d3 * t * t * t)
+    
+    return z
 
 OUTCOMES_DB_PATH = "outcomes.db"
 
@@ -340,7 +404,8 @@ class BayesianUpdater:
             (self.alpha + self.beta) ** 2 * (self.alpha + self.beta + 1)
         )
         
-        ci_low, ci_high = beta_dist.ppf([0.025, 0.975], self.alpha, self.beta)
+        ci_low = _beta_ppf_approx(0.025, self.alpha, self.beta)
+        ci_high = _beta_ppf_approx(0.975, self.alpha, self.beta)
         
         return {
             'alpha': self.alpha,
@@ -366,7 +431,8 @@ class BayesianUpdater:
         post_beta = self.beta + n_adverse
         
         mean = post_alpha / (post_alpha + post_beta)
-        ci_low, ci_high = beta_dist.ppf([0.025, 0.975], post_alpha, post_beta)
+        ci_low = _beta_ppf_approx(0.025, post_alpha, post_beta)
+        ci_high = _beta_ppf_approx(0.975, post_alpha, post_beta)
         
         return {
             'prob_safe': round(mean, 4),
