@@ -1,0 +1,44 @@
+# Grok Doc v2.5 Enterprise - Cloud Deployment Requirements
+# Optimized for Cloud Run / Autoscale deployment
+
+# ============================================================================
+# Core Web Framework
+# ============================================================================
+streamlit==1.38.0              # Web interface framework
+
+# ============================================================================
+# Data Processing
+# ============================================================================
+pandas==2.2.2                  # Data manipulation
+numpy==1.26.4                  # Numerical computing
+requests==2.32.5               # HTTP library
+
+# ============================================================================
+# Machine Learning (CPU-compatible)
+# ============================================================================
+sentence-transformers==3.0.1   # Semantic embeddings for case retrieval
+torch==2.4.1                   # PyTorch (CPU version will be selected)
+transformers==4.44.2           # HuggingFace transformers
+
+# ============================================================================
+# Vector Search (CPU)
+# ============================================================================
+faiss-cpu==1.8.0.post1         # CPU-based similarity search
+
+# ============================================================================
+# Authentication & Security
+# ============================================================================
+pyjwt==2.8.0                   # JWT authentication
+cryptography==43.0.1           # Encryption for audit logs
+
+# ============================================================================
+# Data Validation
+# ============================================================================
+pydantic==2.8.2                # Data validation
+
+# ============================================================================
+# Utilities
+# ============================================================================
+tqdm==4.66.5                   # Progress bars
+python-dotenv==1.0.1           # Environment variables
+urllib3==2.2.2                 # HTTP client
