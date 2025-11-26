@@ -35,6 +35,10 @@ outputType = "webview"
 localPort = 5000
 externalPort = 80
 
+[[ports]]
+localPort = 44071
+externalPort = 3000
+
 [deployment]
-deploymentTarget = "cloudrun"
-run = ["sh", "-c", "    run = \"echo 'Application not running automatically. Run manually using the shell.'\""]
+deploymentTarget = "autoscale"
+run = ["streamlit", "run", "app.py", "--server.port", "5000", "--server.address", "0.0.0.0", "--server.headless"]
