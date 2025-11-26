@@ -5,3 +5,4 @@ integrations = ["github:1.0.0"]
 
 [nix]
 channel = "stable-25_05"
+packages = ["cargo", "glibcLocales", "libiconv", "libxcrypt", "openssl", "pkg-config", "rustc", "xsimd"]
