@@ -94,6 +94,52 @@ class MEATValidator:
         if score >= 0.5: return "⚠️ Partial Documentation"
         return "❌ Non-Compliant"
 
+    def suggest_improvements(self, soap_note: str, condition: str, validation_result: Dict) -> List[str]:
+        """
+        Generate AI-powered suggestions to improve M.E.A.T. compliance.
+        
+        Args:
+            soap_note: The clinical note text
+            condition: The condition being documented
+            validation_result: Output from validate() method
+            
+        Returns:
+            List of suggested phrases to add for missing M.E.A.T. elements
+        """
+        suggestions = []
+        missing = validation_result.get('missing', [])
+        
+        # Template suggestions for each missing element
+        suggestion_templates = {
+            'Monitor': [
+                f"Monitor {condition} progression and symptoms at next visit.",
+                f"Continue to monitor for signs of {condition} complications.",
+                f"Track {condition} status - currently stable/worsening/improving."
+            ],
+            'Evaluate': [
+                f"Evaluated recent test results for {condition}.",
+                f"Reviewed labs pertinent to {condition} management.",
+                f"Physical exam findings consistent with controlled {condition}."
+            ],
+            'Assess': [
+                f"Assessment: {condition} - current status addressed.",
+                f"Discussed {condition} management plan with patient.",
+                f"Plan to order additional testing if {condition} worsens."
+            ],
+            'Treat': [
+                f"Continue current medications for {condition}.",
+                f"Treatment for {condition}: maintain current regimen.",
+                f"Referred to specialist for {condition} management."
+            ]
+        }
+        
+        for element in missing:
+            if element in suggestion_templates:
+                suggestions.append(f"Add for {element}: \"{suggestion_templates[element][0]}\"")
+        
+        return suggestions
+
+
 if __name__ == "__main__":
     validator = MEATValidator()
     

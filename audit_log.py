@@ -1,6 +1,6 @@
 import hashlib
 import json
-from datetime import datetime
+from datetime import datetime, UTC
 import sqlite3
 from pathlib import Path
 from typing import Dict, Optional
@@ -109,7 +109,7 @@ def log_decision(
     """
     init_db()
     
-    timestamp = datetime.utcnow().isoformat() + "Z"
+    timestamp = datetime.now(UTC).isoformat().replace("+00:00", "Z")
     prev_hash = get_last_hash()
     
     # Create entry
@@ -295,7 +295,7 @@ def export_audit_trail(output_path: str = "audit_export.json"):
     conn.close()
     
     export_data = {
-        "export_timestamp": datetime.utcnow().isoformat() + "Z",
+        "export_timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         "integrity_check": integrity,
         "total_entries": len(entries),
         "entries": entries
@@ -324,7 +324,7 @@ def sign_note(note_text: str, physician_id: str, signature_method: str = "PIN") 
             "signature_method": str
         }
     """
-    timestamp = datetime.utcnow().isoformat() + "Z"
+    timestamp = datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
     # Hash the note content
     note_hash = hashlib.sha256(note_text.encode('utf-8')).hexdigest()
@@ -419,7 +419,7 @@ def log_security_violation(
     conn.execute("CREATE INDEX IF NOT EXISTS idx_violation_timestamp ON security_violations(timestamp)")
     conn.commit()
 
-    timestamp = datetime.utcnow().isoformat() + "Z"
+    timestamp = datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
     # Get last hash from security violations chain
     cursor = conn.execute(
@@ -487,7 +487,7 @@ def log_fallback_event(
     """
     init_db()
 
-    timestamp = datetime.utcnow().isoformat() + "Z"
+    timestamp = datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
     conn = sqlite3.connect(DB_PATH)
     try:
