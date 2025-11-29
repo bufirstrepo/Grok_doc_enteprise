@@ -1,168 +1,77 @@
-# Grok Doc v2.5 Enterprise
+# Grok Doc v6.0 Enterprise
 
-HIPAA-compliant clinical AI decision support system with multi-LLM adversarial reasoning.
+**Multi-LLM Clinical AI Co-Pilot with Zero-Cloud Architecture**
 
-## Overview
+Grok Doc is a HIPAA-compliant, on-premises clinical decision support system designed for hospital environments. It features a multi-agent swarm, medical imaging analysis, and automated risk adjustment coding.
 
-Grok Doc is a four-stage multi-LLM reasoning engine that integrates with hospital EHRs and AI tools to provide unified clinical decision support. Designed for 100% on-premises deployment with zero-cloud architecture.
+## 🚀 Key Features
 
-## Project Structure
+### 1. Clinical AI Assistant
+-   **Multi-Agent Swarm (CrewAI)**: Pharmacologist, Risk Analyst, and Specialist agents debate complex cases.
+-   **Medical Imaging (MONAI)**: Auto-analysis of X-rays and CT scans for pathology.
+-   **Evidence-Based**: Retrieval Augmented Generation (RAG) from 17,000+ clinical cases.
+-   **Bayesian Safety**: Probabilistic risk assessment for every recommendation.
 
-```
-grok-doc/
-├── app.py                     # Main Streamlit application
-├── llm_chain.py               # Multi-LLM reasoning chain (Kinetics→Adversarial→Literature→Arbiter)
-├── local_inference.py         # Local LLM inference wrapper
-├── bayesian_engine.py         # Bayesian safety analysis (17k+ cases)
-├── audit_log.py               # Blockchain-style audit trail
-├── vllm_engine.py             # vLLM backend for GPU inference
-├── transformers_backend.py    # Transformers backend (DeepSeek-R1)
-├── data_builder.py            # Case database builder
-│
-├── config/
-│   └── hospital_config.json   # Hospital deployment configuration
-│
-├── pages/
-│   └── admin_dashboard.py     # Admin dashboard for configuration management
-│
-├── src/
-│   ├── config/
-│   │   ├── hospital_config.py # Hospital configuration dataclasses
-│   │   └── credentials.py     # Secure credential management
-│   │
-│   ├── ehr/
-│   │   ├── base.py           # Abstract EHR client interface
-│   │   ├── epic_fhir.py      # Epic FHIR R4 client
-│   │   ├── cerner_fhir.py    # Cerner FHIR R4 client
-│   │   └── unified_model.py  # Unified patient data model
-│   │
-│   ├── adapters/
-│   │   ├── base.py           # AI adapter base class
-│   │   ├── adapter_registry.py # Adapter discovery and orchestration
-│   │   ├── aidoc.py          # Aidoc radiology AI
-│   │   ├── pathAI.py         # PathAI digital pathology
-│   │   ├── tempus.py         # Tempus precision medicine
-│   │   ├── butterfly.py      # Butterfly iQ ultrasound
-│   │   ├── caption_health.py # Caption Health cardiac AI
-│   │   ├── ibm_watson.py     # IBM Watson Health
-│   │   ├── deepmind.py       # DeepMind Health (AKI prediction)
-│   │   └── keragon.py        # Keragon workflow automation
-│   │
-│   └── core/
-│       ├── grok_backend.py       # Grok API with BAA support (DISABLED by default)
-│       ├── kinetics_enhanced.py  # Enhanced Kinetics reasoning engine
-│       ├── adversarial_stage.py  # Adversarial red-team reasoning stage
-│       ├── literature_stage.py   # PubMed integration and evidence grading
-│       ├── cds_hooks.py          # CDS Hooks 2.0 integration
-│       ├── alert_system.py       # Multi-severity alert system with auto-escalation
-│       ├── access_control.py     # Role-based access control (6 roles, 22 permissions)
-│       ├── ambient_scribe.py     # SOAP note generation with ICD-10/CPT coding
-│       └── continuous_learning.py # Outcome capture + Bayesian continuous learning
-```
+### 2. Admin & Operations (v3.0 Enterprise)
+-   **AI Tools Integration**: Adapters for 9 tools (Aidoc, PathAI, DeepMind, etc.).
+-   **Peer Review Workflow**: Human-in-the-loop validation with specialty routing.
+-   **HL7 v2 Messaging**: MLLP listener (Port 2575) for ADT/ORU integration.
+-   **HCC/RAF Scoring**: Expanded to ~4,200 ICD-10 codes.
+-   **Disease Discovery**: NLP engine identifies undocumented conditions.
+-   **M.E.A.T. Compliance**: Real-time validation of clinical documentation.
+-   **EHR Integration**: Adapters for 18 major EHRs (Epic, Cerner, etc.) via FHIR R4.
 
-## Key Features
+### 3. Advanced Clinical & Safety (v4.0)
+-   **Clinical Safety**: Real-time Drug-Drug Interaction (DDI) alerts.
+-   **Analytics Dashboard**: Provider-level HCC capture rates and revenue forecasting.
+-   **Security**: PHI Data Masking ("Demo Mode") for safe training environments.
 
-1. **Multi-LLM Reasoning Chain**: Kinetics → Adversarial → Literature → Arbiter
-2. **EHR Integration**: Epic and Cerner FHIR R4 clients with OAuth2
-3. **Hospital AI Aggregation**: 8 vendor adapters (Aidoc, PathAI, Tempus, Butterfly, Caption Health, IBM Watson, DeepMind, Keragon)
-4. **Bayesian Safety Analysis**: Beta-Binomial inference over 17k+ cases with continuous learning
-5. **Blockchain Audit Trail**: SHA-256 hash-chained decision logging
-6. **HIPAA Compliance**: Credential management, BAA tracking, cloud safeguards
-7. **CDS Hooks 2.0**: Integration with EHR clinical decision points
-8. **Alert System**: Multi-severity alerts with auto-escalation and notification channels
-9. **Role-Based Access Control**: 6 roles (Admin, Physician, Nurse, Pharmacist, Resident, Guest) with 22 granular permissions
-10. **Ambient Scribe**: SOAP note generation with ICD-10/CPT code suggestions
-11. **Continuous Learning**: Outcome capture, calibration tracking (ECE/MCE/Brier), Bayesian prior updates
+### 4. Specialty & RCM (v5.0)
+-   **Specialty Modules**: Cardiology (ASCVD, CHA2DS2-VASc) & Behavioral Health (PHQ-9).
+-   **RCM Engine**: Claims denial prediction based on documentation gaps.
+-   **Care Coordination**: SDOH Screener identifies housing/food/transport needs.
 
-## Configuration
+### 5. Research & Governance (v6.0)
+-   **Advanced Analytics**: Sepsis (qSOFA) and Readmission (LACE) prediction models.
+-   **Clinical Research**: Automated matching of patients to active clinical trials.
+-   **AI Governance**: Real-time bias detection in AI recommendations.
 
-### Hospital Configuration
+### 6. Security & Compliance
+-   **Zero-Cloud**: All inference runs locally (Llama-3.1-70B via vLLM).
+-   **Network Attestation**: 3-layer verification (Subnet, Cert Pinning, SSID).
+-   **Immutable Audit**: Blockchain-style logging of all decisions.
 
-Edit `config/hospital_config.json` to customize:
-- EHR connection (Epic, Cerner, etc.)
-- Enabled AI tool adapters
-- Feature flags
-- Compliance settings
-- LLM preferences
+## 🛠️ Installation
 
-### Required Secrets (Environment Variables)
+### Prerequisites
+-   Ubuntu 22.04+ / Debian 12+
+-   NVIDIA GPU (24GB+ VRAM recommended)
+-   Python 3.10+
 
+### Setup
 ```bash
-# EHR Authentication
-EPIC_CLIENT_SECRET=xxx
-CERNER_CLIENT_SECRET=xxx
+# 1. Clone repository
+git clone https://github.com/bufirstrepo/Grok_doc_enteprise.git
+cd Grok_doc_enteprise
 
-# Optional: Hospital AI Tools
-AIDOC_API_KEY=xxx
-TEMPUS_API_KEY=xxx
-PATHOLOGY_API_KEY=xxx
+# 2. Run setup script (installs dependencies & models)
+./setup.sh
 
-# Optional: Grok Cloud API (DISABLED by default for HIPAA)
-# To enable, you MUST:
-# 1. Sign a BAA with xAI
-# 2. Set GROK_API_KEY=xxx
-# 3. Set GROK_HAS_BAA=true
-# 4. Set GROK_CLOUD_ENABLED=true (explicit opt-in)
+# 3. Launch Application
+./launch_v2.sh
 ```
 
-## Security: Zero-Cloud Architecture
+## 📱 Mobile Co-Pilot
+Access the PWA interface at `http://<server-ip>:8502`
+-   Voice-to-SOAP transcription
+-   "Add to Home Screen" supported on iOS/Android
 
-By default, Grok Doc operates in **LOCAL-ONLY mode**:
-- Cloud API calls are blocked with `CloudDisabledError`
-- All inference uses on-premises models
-- No PHI leaves the hospital network
+## 🏥 EHR Integration
+Configure connections in the **Admin Dashboard**:
+1.  Navigate to `Admin Dashboard` in the sidebar.
+2.  Select your EHR vendor (e.g., Epic).
+3.  Enter FHIR Base URL and OAuth2 credentials.
+4.  Test connection.
 
-To enable cloud Grok API (optional):
-1. Sign a Business Associate Agreement (BAA) with xAI
-2. Set `GROK_HAS_BAA=true`
-3. Set `GROK_CLOUD_ENABLED=true` (explicit opt-in)
-
-## Running the Application
-
-The application runs via Streamlit:
-```bash
-streamlit run app.py --server.port 5000 --server.address 0.0.0.0
-```
-
-## Recent Changes
-
-- 2025-11-26: Fixed continuous_learning.py to remove SciPy dependency (zero external deps)
-- 2025-11-26: Added hard safeguard to Grok cloud backend (DISABLED by default)
-- 2025-11-26: Added CloudDisabledError for explicit cloud opt-in
-- 2025-11-26: Added AdversarialStage for red-team testing of clinical recommendations
-- 2025-11-26: Added LiteratureStage with PubMed integration and evidence grading (Level I-V)
-- 2025-11-26: Added CDS Hooks 2.0 integration
-- 2025-11-26: Added multi-severity alert system with auto-escalation
-- 2025-11-26: Added role-based access control (6 roles, 22 permissions)
-- 2025-11-26: Added ambient scribe with SOAP note generation
-- 2025-11-26: Added continuous learning pipeline with calibration tracking
-- 2025-01-26: Created modular architecture with src/ folder
-- 2025-01-26: Added Epic and Cerner FHIR clients
-- 2025-01-26: Built 8 hospital AI tool adapters
-- 2025-01-26: Added Grok API backend with BAA support
-- 2025-01-26: Created Enhanced Kinetics reasoning engine
-- 2025-01-26: Added hospital configuration system
-
-## User Preferences
-
-- No package installations during development (code-only changes)
-- Prefer on-premises/local inference when possible
-- Maintain HIPAA compliance at all times
-- Zero external dependencies for core functionality
-
-## Technical Notes
-
-- All imports are conditional to handle missing packages gracefully
-- LSP errors for missing packages are expected (not installed per user request)
-- The Streamlit workflow requires package installation to run
-- Demo mode available when running without full dependencies
-- Beta distribution operations use standard library math (no SciPy required)
-- Cloud APIs are disabled by default with explicit opt-in required
-
-## Architecture Decisions
-
-1. **Zero-Cloud Default**: All cloud APIs blocked unless explicitly enabled
-2. **Standard Library First**: Core functionality uses only Python standard library
-3. **Modular Adapters**: Plug-and-play hospital AI tool integration
-4. **Blockchain Audit**: SHA-256 hash-chained logging for compliance
-5. **Bayesian Safety**: Beta-Binomial conjugate priors for continuous learning
+## 📄 License
+Enterprise License - Internal Hospital Use Only.

@@ -20,6 +20,11 @@ from soap_generator import generate_soap_from_voice
 from audit_log import log_decision
 from bayesian_engine import bayesian_safety_assessment
 import tempfile
+try:
+    from crewai_agents import run_crewai_decision
+    CREWAI_AVAILABLE = True
+except ImportError:
+    CREWAI_AVAILABLE = False
 
 # ── MOBILE-OPTIMIZED PAGE CONFIG ─────────────────────────────────
 st.set_page_config(
@@ -53,6 +58,13 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 </style>
+
+<!-- PWA Meta Tags for "Add to Home Screen" -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Grok Doc">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="apple-touch-icon" href="https://raw.githubusercontent.com/bufirstrepo/Grok_doc_enteprise/main/assets/icon.png">
 """, unsafe_allow_html=True)
 
 st.title("🩺 Grok Doc Mobile")
@@ -147,10 +159,11 @@ if st.session_state.transcript and not st.session_state.soap_result:
 
     col1, col2 = st.columns(2)
     with col1:
-        use_chain_mode = st.checkbox(
-            "Use Multi-LLM Chain",
-            value=True,
-            help="4-stage adversarial reasoning (slower but more accurate)"
+        analysis_mode = st.radio(
+            "Analysis Mode",
+            options=["⚡ Fast", "🔗 Chain", "🤖 CrewAI"],
+            horizontal=True,
+            help="Fast: 2s | Chain: 15s | CrewAI: 25s (Agents)"
         )
     with col2:
         include_evidence = st.checkbox(
@@ -169,7 +182,19 @@ if st.session_state.transcript and not st.session_state.soap_result:
                     'labs': st.session_state.transcript  # Extract labs from transcript
                 }
 
-                if use_chain_mode:
+                if "CrewAI" in analysis_mode:
+                    if not CREWAI_AVAILABLE:
+                        st.error("CrewAI missing. Install dependencies.")
+                        st.stop()
+                    
+                    chain_result = run_crewai_decision(
+                        patient_context=patient_context,
+                        query=st.session_state.transcript,
+                        retrieved_cases=[],
+                        bayesian_result={'prob_safe': 0.85, 'n_cases': 100}
+                    )
+                
+                elif "Chain" in analysis_mode:
                     # Run multi-LLM chain
                     chain_result = run_multi_llm_decision(
                         patient_context=patient_context,

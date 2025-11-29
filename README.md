@@ -8,14 +8,18 @@
 
 ---
 
-## 🆕 What's New in v2.0
+## 🌟 Key Features
 
-### Multi-LLM Reasoning Chain
-- **4-Stage adversarial reasoning** for critical clinical decisions
-- **Kinetics Model** → Pharmacokinetic calculations
-- **Adversarial Model** → Devil's advocate risk analysis
-- **Literature Model** → Evidence-based validation
-- **Arbiter Model** → Final reconciliation and decision
+### v3.0 (Current - Beta)
+- **🤖 CrewAI Agent Swarm**: Autonomous multi-agent orchestration (Pharmacologist, Risk Analyst, Literature, Arbiter).
+- **📱 Mobile Co-Pilot PWA**: "Add to Home Screen" capable mobile app with voice-to-SOAP.
+- **🖼️ Medical Imaging AI**: Integrated MONAI/CheXNet for X-ray/CT analysis.
+- **⚡ Zero-Cloud Architecture**: All inference runs locally (vLLM + Whisper).
+
+### v2.0 (Stable)
+- **🔗 Multi-LLM Chain**: 4-stage reasoning pipeline (Kinetics → Adversarial → Literature → Arbiter).
+- **🔒 HIPAA Compliance**: On-premises execution, audit trails, network isolation.
+- **🏥 EHR Integration**: FHIR-ready data structure.
 - **Cryptographic integrity verification** with blockchain-style hash chaining
 
 ### Dual-Mode Operation

@@ -88,6 +88,12 @@ echo ""
 # ── STEP 1: SYSTEM CHECKS ─────────────────────────────────────────
 step "Step 1/5: Checking system requirements"
 
+# Check for virtual environment
+if [ -d "venv" ]; then
+    info "Activating virtual environment..."
+    source venv/bin/activate
+fi
+
 # Check Python
 if ! command -v python3 &> /dev/null; then
     error "Python 3 is not installed. Please install Python $PYTHON_MIN_VERSION+"

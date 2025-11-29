@@ -90,6 +90,12 @@ echo ""
 # ── SYSTEM CHECKS ─────────────────────────────────────────────────
 info "Running system checks..."
 
+# Check for virtual environment
+if [ -d "venv" ]; then
+    info "Activating virtual environment..."
+    source venv/bin/activate
+fi
+
 # Check Python version
 if ! command -v python3 &> /dev/null; then
     error "Python 3 is not installed. Please install Python 3.9+"
@@ -137,8 +143,8 @@ fi
 
 # Check dependencies
 info "Checking Python dependencies..."
-if ! python3 -c "import streamlit" &> /dev/null; then
-    warn "Streamlit not installed. Installing dependencies..."
+if ! python3 -c "import streamlit; import crewai" &> /dev/null; then
+    warn "Dependencies missing (Streamlit or CrewAI). Installing..."
     pip install -r requirements.txt
 fi
 
@@ -181,6 +187,7 @@ echo "║                                                            ║"
 echo "║  Features:                                                ║"
 echo "║    • ⚡ Fast Mode (v1.0) - Single LLM (~2s)               ║"
 echo "║    • 🔗 Chain Mode (v2.0) - Multi-LLM chain (~8s)         ║"
+echo "║    • 🤖 CrewAI Mode (v3.0) - Agent Swarm (~25s)           ║"
 echo "║                                                            ║"
 echo "║  Press Ctrl+C to stop                                     ║"
 echo "║                                                            ║"
