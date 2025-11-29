@@ -99,7 +99,7 @@ class MEATValidator:
         Generate AI-powered suggestions to improve M.E.A.T. compliance.
         
         Args:
-            soap_note: The clinical note text
+            soap_note: The clinical note text (used for context-aware suggestions)
             condition: The condition being documented
             validation_result: Output from validate() method
             
@@ -108,8 +108,10 @@ class MEATValidator:
         """
         suggestions = []
         missing = validation_result.get('missing', [])
+        note_lower = soap_note.lower()
         
         # Template suggestions for each missing element
+        # Use soap_note context to provide more relevant suggestions
         suggestion_templates = {
             'Monitor': [
                 f"Monitor {condition} progression and symptoms at next visit.",
@@ -135,7 +137,19 @@ class MEATValidator:
         
         for element in missing:
             if element in suggestion_templates:
-                suggestions.append(f"Add for {element}: \"{suggestion_templates[element][0]}\"")
+                # Choose most relevant suggestion based on note context
+                template_list = suggestion_templates[element]
+                selected_template = template_list[0]  # Default to first
+                
+                # Context-aware selection
+                if element == 'Monitor' and 'follow' in note_lower:
+                    selected_template = template_list[2]  # Track status
+                elif element == 'Evaluate' and 'lab' in note_lower:
+                    selected_template = template_list[1]  # Reviewed labs
+                elif element == 'Treat' and 'refer' in note_lower:
+                    selected_template = template_list[2]  # Referred
+                    
+                suggestions.append(f"Add for {element}: \"{selected_template}\"")
         
         return suggestions
 

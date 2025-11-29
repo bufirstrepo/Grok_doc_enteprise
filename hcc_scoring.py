@@ -5,6 +5,11 @@ Calculates Risk Adjustment Factor (RAF) scores based on CMS-HCC model (v28).
 
 from typing import List, Dict, Tuple
 
+# Default values for batch processing when patient data is incomplete
+DEFAULT_AGE = 65  # Medicare eligibility age
+DEFAULT_GENDER = 'M'  # Default to male for calculation purposes
+
+
 class HCCEngine:
     """
     CMS-HCC Risk Adjustment Engine
@@ -219,8 +224,8 @@ class HCCEngine:
         results = []
         for patient in patients:
             result = self.calculate_raf(
-                patient.get('age', 65),
-                patient.get('gender', 'M'),
+                patient.get('age', DEFAULT_AGE),
+                patient.get('gender', DEFAULT_GENDER),
                 patient.get('icd_codes', [])
             )
             result['mrn'] = patient.get('mrn', 'UNKNOWN')

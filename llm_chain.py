@@ -25,6 +25,9 @@ THREE_LINE_PATTERN = re.compile(
     r"Key [^:]+: (.+?)(?=\n\n|\Z)", re.DOTALL
 )
 
+# Placeholder for step_hash before computation (will be replaced with actual hash)
+PENDING_HASH = ""
+
 # 4. BLAKE3 hashing (using BLAKE2b as standard lib fallback)
 def blake3_hash(text: str) -> str:
     return hashlib.blake2b(text.encode()).hexdigest()
@@ -272,7 +275,7 @@ class MultiLLMChain:
             response=warning_msg,
             timestamp=timestamp,
             prev_hash=prev_hash,
-            step_hash="",  # Placeholder - will be computed below
+            step_hash=PENDING_HASH,  # Placeholder - will be computed after creation
             confidence=0.5,  # Reduced confidence for fallback
             model_name="FALLBACK"
         )
@@ -317,7 +320,7 @@ SHOW YOUR WORK: List every parameter used (e.g., 'Creatinine: 1.2 mg/dL from Lab
             response=response_text,
             timestamp=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             prev_hash=self._get_last_hash(),
-            step_hash="",
+            step_hash=PENDING_HASH,  # Computed after creation
             confidence=bayesian['prob_safe'],
             model_name=model_name,
             execution_time_ms=dt,
@@ -387,7 +390,7 @@ OUTPUT: Provide a concise 4-sentence report:
             response=response_text,
             timestamp=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             prev_hash=self._get_last_hash(),
-            step_hash="",
+            step_hash=PENDING_HASH,  # Computed after creation
             confidence=coding_confidence,
             model_name=model_name,
             execution_time_ms=execution_time,
@@ -454,7 +457,7 @@ FINAL SAFETY SCORE: [0.0-1.0]"""
             response=response_text,
             timestamp=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             prev_hash=self._get_last_hash(),
-            step_hash="",
+            step_hash=PENDING_HASH,  # Computed after creation
             confidence=safety_score,
             model_name=model_name,
             execution_time_ms=execution_time,
@@ -514,7 +517,7 @@ EVIDENCE STRENGTH: [0.0-1.0]"""
             response=response_text,
             timestamp=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             prev_hash=self._get_last_hash(),
-            step_hash="",
+            step_hash=PENDING_HASH,  # Computed after creation
             confidence=evidence_strength,
             model_name=model_name,
             execution_time_ms=execution_time,
@@ -619,7 +622,7 @@ INSTRUCTION: Return ONLY a single valid JSON object with this exact structure. N
             response=response,
             timestamp=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             prev_hash=self._get_last_hash(),
-            step_hash="",
+            step_hash=PENDING_HASH,  # Computed after creation
             confidence=final_confidence,
             model_name=model_name,
             execution_time_ms=execution_time,
