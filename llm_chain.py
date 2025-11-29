@@ -78,9 +78,9 @@ class MultiLLMChain:
         # Load Prompt Personas from external module
         self.PROMPT_PERSONAS = get_updated_personas()
     
-    def _compute_step_hash(self, step_name: str, prompt: str, response: str, prev_hash: str) -> str:
+    def _compute_step_hash(self, step_name: str, prompt: str, response: str, prev_hash: str, timestamp: str) -> str:
         """Compute cryptographic hash for this chain step"""
-        content = f"{prev_hash}|{step_name}|{prompt}|{response}|{time.time()}"
+        content = f"{prev_hash}|{step_name}|{prompt}|{response}|{timestamp}"
         return blake3_hash(content)
     
     def _get_last_hash(self) -> str:
@@ -270,11 +270,12 @@ class MultiLLMChain:
             warning_msg,
             datetime.utcnow().isoformat() + "Z",
             self._get_last_hash(),
-            "",
+            self._get_last_hash(),
+            "", # step_hash placeholder
             0.5,  # Reduced confidence for fallback
             "FALLBACK"
         )
-        step.step_hash = self._compute_step_hash(step.step_name, step.prompt, step.response, step.prev_hash)
+        step.step_hash = self._compute_step_hash(step.step_name, step.prompt, step.response, step.prev_hash, step.timestamp)
         self.chain_history.append(step)
         return step
     
@@ -315,13 +316,14 @@ SHOW YOUR WORK: List every parameter used (e.g., 'Creatinine: 1.2 mg/dL from Lab
             response=response_text,
             timestamp=datetime.utcnow().isoformat() + "Z",
             prev_hash=self._get_last_hash(),
+            step_hash="",
             confidence=bayesian['prob_safe'],
             model_name=model_name,
             execution_time_ms=dt,
             tokens_used=None,
             structured_data=structured_data
         )
-        step.step_hash = self._compute_step_hash(step.step_name, step.prompt, step.response, step.prev_hash)
+        step.step_hash = self._compute_step_hash(step.step_name, step.prompt, step.response, step.prev_hash, step.timestamp)
         self.chain_history.append(step)
         return step
     
@@ -384,13 +386,14 @@ OUTPUT: Provide a concise 4-sentence report:
             response=response_text,
             timestamp=datetime.utcnow().isoformat() + "Z",
             prev_hash=self._get_last_hash(),
+            step_hash="",
             confidence=coding_confidence,
             model_name=model_name,
             execution_time_ms=execution_time,
             tokens_used=None,
             structured_data=structured_data
         )
-        step.step_hash = self._compute_step_hash(step.step_name, step.prompt, step.response, step.prev_hash)
+        step.step_hash = self._compute_step_hash(step.step_name, step.prompt, step.response, step.prev_hash, step.timestamp)
         self.chain_history.append(step)
         return step
     
@@ -450,13 +453,14 @@ FINAL SAFETY SCORE: [0.0-1.0]"""
             response=response_text,
             timestamp=datetime.utcnow().isoformat() + "Z",
             prev_hash=self._get_last_hash(),
+            step_hash="",
             confidence=safety_score,
             model_name=model_name,
             execution_time_ms=execution_time,
             tokens_used=None,
             structured_data=structured_data
         )
-        step.step_hash = self._compute_step_hash(step.step_name, step.prompt, step.response, step.prev_hash)
+        step.step_hash = self._compute_step_hash(step.step_name, step.prompt, step.response, step.prev_hash, step.timestamp)
         self.chain_history.append(step)
         return step
 
@@ -516,7 +520,7 @@ EVIDENCE STRENGTH: [0.0-1.0]"""
             tokens_used=None,
             structured_data=structured_data
         )
-        step.step_hash = self._compute_step_hash(step.step_name, step.prompt, step.response, step.prev_hash)
+        step.step_hash = self._compute_step_hash(step.step_name, step.prompt, step.response, step.prev_hash, step.timestamp)
         self.chain_history.append(step)
         return step
     
@@ -620,7 +624,7 @@ INSTRUCTION: Return ONLY a single valid JSON object with this exact structure. N
             confidence_interval=confidence_interval,
             structured_data=arbiter_data
         )
-        step.step_hash = self._compute_step_hash(step.step_name, step.prompt, step.response, step.prev_hash)
+        step.step_hash = self._compute_step_hash(step.step_name, step.prompt, step.response, step.prev_hash, step.timestamp)
         self.chain_history.append(step)
 
         return {"step": step, "response": step.response, "confidence": final_confidence, "confidence_breakdown": confidence_breakdown}
@@ -659,7 +663,7 @@ INSTRUCTION: Return ONLY a single valid JSON object with this exact structure. N
         for step in self.chain_history:
             if step.prev_hash != expected_prev_hash:
                 return False
-            computed_hash = self._compute_step_hash(step.step_name, step.prompt, step.response, step.prev_hash)
+            computed_hash = self._compute_step_hash(step.step_name, step.prompt, step.response, step.prev_hash, step.timestamp)
             if computed_hash != step.step_hash:
                 return False
             expected_prev_hash = step.step_hash
