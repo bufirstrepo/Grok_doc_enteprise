@@ -368,8 +368,8 @@ with st.sidebar:
                 st.subheader("AI Bias Detection")
                 st.caption("Auditing current session inputs for potential bias...")
                 detector = BiasDetector()
-                # Audit the chief complaint + plan context
-                audit = detector.audit_recommendation(chief + " " + history)
+                # Audit the chief complaint + labs context
+                audit = detector.audit_recommendation(chief + " " + labs)
                 st.metric("Bias Risk Level", audit['risk_level'])
                 if audit['flags']:
                     for flag in audit['flags']:
@@ -700,7 +700,7 @@ if submit:
                 for i, case in enumerate(retrieved_cases[:10]):
                     st.markdown(f"**Case {i+1}:** {case.get('summary', 'No summary available')}")
 
-    elif use_chain_mode:  # Multi-LLM Chain (v2.0)
+    else:  # Fast Mode (v1.0)
         with st.spinner("🔬 Retrieving evidence → Bayesian analysis → LLM reasoning..."):
             start_time = datetime.now()
 
@@ -826,7 +826,7 @@ Provide a concise recommendation (3-4 sentences max). Include:
                         doctor=doctor_name,
                         bayesian_prob=bayesian_result['prob_safe'],
                         latency=latency,
-                        analysis_mode="chain" if use_chain_mode else "fast"  # NEW in v2.0
+                        analysis_mode="chain" if "Chain" in analysis_mode else ("crewai" if "CrewAI" in analysis_mode else "fast")
                     )
 
                     st.success(f"✓ Logged to immutable audit trail (Hash: {log_entry['hash'][:16]}...)")
