@@ -5,6 +5,7 @@
 # Core Web Framework
 # ============================================================================
 streamlit==1.38.0              # Web interface framework
+flask>=2.3.0                   # Alternative web server (optional)
 
 # ============================================================================
 # AI API Clients (Multi-Vendor Support)
@@ -12,6 +13,7 @@ streamlit==1.38.0              # Web interface framework
 openai>=1.0.0                  # xAI Grok + Azure OpenAI
 anthropic>=0.18.0              # Anthropic Claude (optional)
 google-generativeai>=0.3.0     # Google Gemini/Med-PaLM (optional)
+vllm>=0.4.0                    # Local LLM inference (optional)
 
 # ============================================================================
 # Data Processing
@@ -25,6 +27,8 @@ requests==2.32.5               # HTTP library
 # ============================================================================
 pyjwt==2.8.0                   # JWT authentication
 cryptography==43.0.1           # Encryption for audit logs
+pysqlcipher3>=1.0.0            # Encrypted SQLite (optional)
+blake3>=0.4.0                  # Fast cryptographic hashing
 
 # ============================================================================
 # Data Validation

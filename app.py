@@ -16,11 +16,19 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from urllib3.util.retry import Retry
 from src.config.hospital_config import get_config
-from local_inference import grok_query, list_available_models
+from local_inference import grok_query, list_available_models, init_inference_engine
 from audit_log import log_decision, verify_audit_integrity, log_security_violation
 from bayesian_engine import bayesian_safety_assessment
 from llm_chain import run_multi_llm_decision  # NEW in v2.0
 import tempfile  # For image uploads
+
+# Fail-fast initialization - verify inference engine is ready at startup
+try:
+    init_inference_engine()
+except Exception as e:
+    st.error(f"Failed to initialize inference engine: {e}")
+    st.stop()
+
 try:
     from crewai_agents import run_crewai_decision  # NEW in v3.0
     CREWAI_AVAILABLE = True
