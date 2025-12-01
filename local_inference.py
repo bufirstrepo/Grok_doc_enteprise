@@ -1,8 +1,8 @@
 """
 Local LLM Inference Engine with Explicit Model Routing
 
-Central model routing for Grok Doc v2.0+
-Supports multiple models across different backends (vLLM, Transformers).
+Central model routing for Grok Doc v6.5+
+Supports xAI API (Cloud) and legacy local backends.
 
 This is the ONLY file that determines which model is used for inference.
 All model selection flows through CURRENT_MODEL or explicit model_name parameter.
@@ -11,104 +11,85 @@ All model selection flows through CURRENT_MODEL or explicit model_name parameter
 from functools import lru_cache
 from typing import Literal, Optional, Dict, cast
 import os
+import sys
+
+# Ensure src is in path for imports if running from root
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from src.config.hospital_config import get_config
 
 # ── CENTRAL MODEL SELECTOR ───────────────────────────────────────
 # This is the ONLY place you change the default model for the entire system
 
-ModelType = Literal[
-    "grok-4",
-    "claude-3.5-sonnet",
-    "deepseek-r1",
-    "deepseek-r1-distill-llama-70b",
-    "llama-3.1-70b",
-    "mixtral-8x22b"
-]
+# Type hint for known models (extensible via config)
+ModelType = str
 
-_default_model = os.getenv("GROK_DEFAULT_MODEL", "llama-3.1-70b")
-CURRENT_MODEL: ModelType = cast(ModelType, _default_model) if _default_model in [
-    "grok-4", "claude-3.5-sonnet", "deepseek-r1",
-    "deepseek-r1-distill-llama-70b", "llama-3.1-70b", "mixtral-8x22b"
-] else "llama-3.1-70b"
-
-
-# ── MODEL BACKEND MAPPING ────────────────────────────────────────
-
-MODEL_BACKENDS = {
-    # vLLM-compatible models (high performance, GPU-optimized)
-    "grok-4": "vllm",
-    "llama-3.1-70b": "vllm",
-    "mixtral-8x22b": "vllm",
-
-    # Transformers-only models (broader compatibility)
-    "deepseek-r1": "transformers",
-    "deepseek-r1-distill-llama-70b": "transformers",
-
-    # Future: Local Claude proxy (when available)
-    "claude-3.5-sonnet": "claude_proxy",
-    "claude-3-opus": "claude_proxy",
-}
-
+_default_model = os.getenv("GROK_DEFAULT_MODEL", "grok-beta")
+CURRENT_MODEL: ModelType = _default_model
 
 # ── SINGLETON FACTORY ────────────────────────────────────────────
 
 @lru_cache(maxsize=5)
 def get_llm(model_name: Optional[str] = None) -> Dict:
     """
-    Singleton factory with explicit model routing.
-
-    This function is the heart of the tribunal experiment system:
-    - Returns model engine + metadata for any supported model
-    - LRU cache allows multiple models in memory (up to 5)
-    - Explicit backend selection ensures reproducibility
-
-    Args:
-        model_name: Optional model override. If None, uses CURRENT_MODEL.
-
-    Returns:
-        dict: {
-            "type": str,         # Backend type: "vllm", "transformers", "claude_proxy"
-            "name": str,         # Model name
-            "engine": Any,       # Backend-specific engine/pipeline
-        }
-
-    Raises:
-        ValueError: If model not supported
-        NotImplementedError: If backend not yet implemented
-        RuntimeError: If model loading fails
+    Singleton factory with explicit model routing using Unified Dynamic Configuration.
     """
+    config = get_config()
     model = model_name or CURRENT_MODEL
 
-    # Validate model
-    if model not in MODEL_BACKENDS:
-        raise ValueError(
-            f"Unsupported model: {model}\n"
-            f"Supported models: {', '.join(MODEL_BACKENDS.keys())}"
-        )
+    # Validate model against dynamic config
+    if model not in config.ai_tools:
+        # Fallback logic or error
+        print(f"⚠️ Warning: Model '{model}' not found in configuration. Defaulting to xAI.")
+        # We can try to find a default xAI tool or just fail if strict
+        # For now, let's try to find a tool with 'xai_api' backend or default to hardcoded fallback
+        backend_type = "xai_api"
+        tool_config = None
+    else:
+        tool_config = config.ai_tools[model]
+        backend_type = tool_config.backend
 
-    backend = MODEL_BACKENDS[model]
+    # ── xAI API Backend ──
+    if backend_type == "xai_api":
+        from grok_client import get_grok_client
+        client = get_grok_client()
+        return {"type": "xai_api", "name": model, "engine": client}
+    
+    # ── Azure OpenAI Backend (Hospital HIPAA) ──
+    elif backend_type == "azure_openai":
+        from azure_openai_client import get_azure_client
+        client = get_azure_client()
+        return {"type": "azure_openai", "name": model, "engine": client}
+    
+    # ── Anthropic Claude Backend ──
+    elif backend_type == "anthropic":
+        from anthropic_client import get_anthropic_client
+        client = get_anthropic_client()
+        return {"type": "anthropic", "name": model, "engine": client}
+    
+    # ── Google Vertex AI Backend ──
+    elif backend_type == "google":
+        from google_client import get_google_client
+        client = get_google_client()
+        return {"type": "google", "name": model, "engine": client}
 
-    # ── vLLM Backend ──
-    if backend == "vllm":
-        from vllm_engine import get_vllm_engine
-        engine = get_vllm_engine(model)
-        return {"type": "vllm", "name": model, "engine": engine}
+    # ── vLLM Backend (Local/On-Prem) ──
+    elif backend_type == "vllm":
+        try:
+            from vllm_engine import get_vllm_engine
+            engine = get_vllm_engine(model)
+            return {"type": "vllm", "name": model, "engine": engine}
+        except ImportError:
+            raise RuntimeError("vLLM backend not installed.")
 
-    # ── Transformers Backend ──
-    elif backend == "transformers":
-        from transformers_backend import get_deepseek_pipeline
-        pipeline = get_deepseek_pipeline(model)
-        return {"type": "transformers", "name": model, "engine": pipeline}
-
-    # ── Claude Proxy (Future) ──
-    elif backend == "claude_proxy":
-        # Future: Local Claude proxy via Anthropic on-prem or vLLM when available
-        raise NotImplementedError(
-            f"Claude local backend not yet integrated for {model}.\n"
-            "Planned for future release when on-premises Claude becomes available."
-        )
+    # ── Perplexity Backend ──
+    elif backend_type == "perplexity":
+        from perplexity_client import get_perplexity_client
+        client = get_perplexity_client()
+        return {"type": "perplexity", "name": model, "engine": client}
 
     else:
-        raise ValueError(f"Unknown backend: {backend}")
+        raise ValueError(f"Unknown backend type: {backend_type} for model {model}")
 
 
 # ── PRIMARY INFERENCE FUNCTION ───────────────────────────────────
@@ -123,244 +104,154 @@ def grok_query(
 ) -> str:
     """
     Primary entry point for clinical reasoning.
-
-    This function provides:
-    - Explicit model selection (critical for tribunal comparison)
-    - Full provenance (backend type logged in audit trail)
-    - Automatic logged fallback only if primary engine crashes
-    - Zero-cloud guarantee (all inference on-premises)
-
-    Args:
-        prompt: Clinical question or prompt
-        temperature: Sampling temperature (0.0 = deterministic for medical use)
-        max_tokens: Maximum tokens to generate
-        model_name: Optional model override (if None, uses CURRENT_MODEL)
-        system_prompt: Optional system prompt to prepend
-        stream: Whether to stream output (not yet implemented)
-
-    Returns:
-        str: Generated clinical response
-
-    Raises:
-        ValueError: If prompt invalid
-        RuntimeError: If inference fails with no fallback available
     """
     # Get LLM engine
     llm = get_llm(model_name)
 
-    # Build full prompt with system message
-    if system_prompt:
-        full_prompt = f"{system_prompt}\n\n{prompt}"
-    else:
-        full_prompt = prompt
-
     try:
         # ── Route to appropriate backend ──
 
-        if llm["type"] == "vllm":
-            from vllm_engine import query_vllm
-            response = query_vllm(
-                llm["engine"],
-                full_prompt,
+        # ── xAI API ──
+        if llm["type"] == "xai_api":
+            client = llm["engine"]
+            return client.query_xai(
+                prompt,
+                model=llm["name"],
                 temperature=temperature,
                 max_tokens=max_tokens,
+                system_prompt=system_prompt,
                 stream=stream
             )
-            return response
+        
+        # ── Azure OpenAI ──
+        elif llm["type"] == "azure_openai":
+            client = llm["engine"]
+            return client.query(
+                prompt,
+                model=llm["name"],
+                temperature=temperature,
+                max_tokens=max_tokens,
+                system_prompt=system_prompt
+            )
+        
+        # ── Anthropic Claude ──
+        elif llm["type"] == "anthropic":
+            client = llm["engine"]
+            return client.query(
+                prompt,
+                model=llm["name"],
+                temperature=temperature,
+                max_tokens=max_tokens,
+                system_prompt=system_prompt
+            )
+        
+        # ── Google Vertex AI ──
+        elif llm["type"] == "google":
+            client = llm["engine"]
+            return client.query(
+                prompt,
+                model=llm["name"],
+                temperature=temperature,
+                max_tokens=max_tokens,
+                system_prompt=system_prompt
+            )
 
-        elif llm["type"] == "transformers":
-            from transformers_backend import query_transformers
-            response = query_transformers(
+        # ── Local vLLM ──
+        elif llm["type"] == "vllm":
+            from vllm_engine import query_vllm
+            full_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
+            return query_vllm(
                 llm["engine"],
                 full_prompt,
                 temperature=temperature,
                 max_tokens=max_tokens,
                 stream=stream
             )
-            return response
+
+        # ── Perplexity ──
+        elif llm["type"] == "perplexity":
+            client = llm["engine"]
+            return client.query(
+                prompt,
+                model=llm["name"],
+                temperature=temperature,
+                max_tokens=max_tokens,
+                system_prompt=system_prompt
+            )
 
         else:
             raise RuntimeError(f"Backend {llm['type']} not implemented")
 
     except Exception as e:
         # ── FALLBACK HANDLING ──
-        # This is the ONLY place fallback is allowed → auditable & measurable
-
         from audit_log import log_fallback_event
 
         # Log the fallback event
-        fallback_logged = log_fallback_event(
+        log_fallback_event(
             primary_model=llm["name"],
             exception_msg=str(e)
         )
-
-        # Try fallback to smallest model (if not already using it)
-        if llm["name"] != "llama-3.1-70b" and model_name is None:
-            print(f"⚠️  Primary model {llm['name']} failed. Attempting fallback to llama-3.1-70b...")
-            try:
-                return grok_query(
-                    prompt,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    model_name="llama-3.1-70b",  # Explicit fallback
-                    system_prompt=system_prompt,
-                    stream=stream
-                )
-            except Exception as fallback_error:
-                # Even fallback failed - return safe error message
-                error_msg = (
-                    "⚠️ AUTOMATED RESPONSE UNAVAILABLE\n\n"
-                    "The AI inference engine encountered an error. "
-                    "Please review this case manually and consult standard clinical guidelines.\n\n"
-                    f"Primary model: {llm['name']}\n"
-                    f"Error: {str(e)}\n"
-                    f"Fallback error: {str(fallback_error)}"
-                )
-                return error_msg
-
-        # No fallback available or explicit model requested - return error
-        error_msg = (
-            "⚠️ AUTOMATED RESPONSE UNAVAILABLE\n\n"
-            "The AI inference engine encountered an error. "
-            "Please review this case manually and consult standard clinical guidelines.\n\n"
-            f"Model: {llm['name']}\n"
-            f"Error: {str(e)}"
-        )
-        return error_msg
-
-
-# ── ALTERNATIVE LEGACY FUNCTION ──────────────────────────────────
-# Kept for backward compatibility with existing code
-
-def grok_query_transformers(
-    prompt: str,
-    temperature: float = 0.0,
-    max_tokens: int = 2048
-) -> str:
-    """
-    Legacy fallback function using Transformers backend.
-    Kept for backward compatibility.
-
-    New code should use grok_query(model_name="deepseek-r1") instead.
-    """
-    return grok_query(
-        prompt,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        model_name="deepseek-r1"
-    )
+        
+        return f"⚠️ AI Error: {str(e)}"
 
 
 # ── STATUS & DIAGNOSTICS ─────────────────────────────────────────
 
 def check_model_status(model_name: Optional[str] = None) -> dict:
-    """
-    Check if a model is loaded and get system info.
-
-    Args:
-        model_name: Model to check (if None, checks CURRENT_MODEL)
-
-    Returns:
-        dict: Model status information
-    """
+    """Check if a model is ready."""
     model = model_name or CURRENT_MODEL
-
     try:
         llm = get_llm(model)
-
-        if llm["type"] == "vllm":
-            from vllm_engine import get_vllm_status
-            return get_vllm_status(model)
-        elif llm["type"] == "transformers":
-            from transformers_backend import get_transformers_status
-            return get_transformers_status(model)
-        else:
+        if llm["type"] == "xai_api":
+            client = llm["engine"]
             return {
                 "model_name": model,
-                "backend": llm["type"],
-                "loaded": False,
-                "error": "Backend not yet implemented"
+                "backend": "xai_api",
+                "loaded": client.is_ready(),
+                "api_key_configured": bool(client.api_key)
             }
-    except Exception as e:
-        return {
-            "model_name": model,
-            "loaded": False,
-            "error": str(e)
-        }
-
-
-def warmup_model(model_name: Optional[str] = None):
-    """
-    Warmup a model with a simple query to preload everything.
-    Call during application startup to hide latency.
-
-    Args:
-        model_name: Model to warmup (if None, uses CURRENT_MODEL)
-
-    Returns:
-        bool: True if successful, False otherwise
-    """
-    model = model_name or CURRENT_MODEL
-
-    try:
-        llm = get_llm(model)
-
-        if llm["type"] == "vllm":
-            from vllm_engine import warmup_vllm
-            return warmup_vllm(model)
-        elif llm["type"] == "transformers":
-            from transformers_backend import warmup_transformers
-            return warmup_transformers(model)
         else:
-            print(f"⚠️  Warmup not supported for backend: {llm['type']}")
-            return False
+            # Generic status for other backends
+            return {"model_name": model, "backend": llm["type"], "loaded": True}
     except Exception as e:
-        print(f"⚠️  Model warmup failed for {model}: {e}")
-        return False
+        return {"model_name": model, "error": str(e)}
 
 
 def list_available_models() -> dict:
-    """
-    List all available models and their backends.
-
-    Returns:
-        dict: Model name -> backend mapping
-    """
-    return MODEL_BACKENDS.copy()
+    """List all available models from dynamic config."""
+    config = get_config()
+    # Return a dict mapping model_name -> backend_type to match previous signature
+    return {name: tool.backend for name, tool in config.ai_tools.items()}
 
 
 def get_current_model() -> str:
-    """
-    Get the current default model.
-
-    Returns:
-        str: Current model name
-    """
+    """Get the current default model."""
     return CURRENT_MODEL
 
 
 # ── INITIALIZATION ───────────────────────────────────────────────
 
 def init_inference_engine():
-    """
-    Initialize the inference engine.
-    Prints configuration and optionally warms up the default model.
-    """
+    """Initialize the inference engine."""
     print("=" * 60)
-    print("Grok Doc Inference Engine - Model Routing System")
+    print("Grok Doc Inference Engine - Unified Dynamic Config")
     print("=" * 60)
     print(f"Default Model: {CURRENT_MODEL}")
-    print(f"Backend: {MODEL_BACKENDS.get(CURRENT_MODEL, 'Unknown')}")
-    print(f"Available Models: {', '.join(MODEL_BACKENDS.keys())}")
+    
+    config = get_config()
+    if CURRENT_MODEL in config.ai_tools:
+        print(f"Backend: {config.ai_tools[CURRENT_MODEL].backend}")
+    else:
+        print(f"Backend: Unknown (Model {CURRENT_MODEL} not in config)")
+    
+    # Check API Key
+    if not os.getenv("XAI_API_KEY"):
+        print("⚠️  WARNING: XAI_API_KEY not found. API calls will fail.")
+    else:
+        print("✓ XAI_API_KEY configured")
     print("=" * 60)
 
-    # Optional: Warmup default model
-    warmup = os.getenv("WARMUP_MODEL", "false").lower() == "true"
-    if warmup:
-        print(f"Warming up {CURRENT_MODEL}...")
-        warmup_model()
 
-
-# Auto-init on import (can be disabled with env var)
+# Auto-init on import
 if os.getenv("SKIP_AUTO_INIT", "false").lower() != "true":
     init_inference_engine()

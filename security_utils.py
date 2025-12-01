@@ -49,8 +49,38 @@ class PHIMasker:
         """Check if Demo Mode is active in session state"""
         return session_state.get('demo_mode', False)
 
+
+class LDAPAuthenticator:
+    """
+    Enterprise LDAP/Active Directory Authentication.
+    """
+    def __init__(self, server_uri: str = "ldap://localhost", bind_dn: str = "", bind_password: str = ""):
+        self.server_uri = server_uri
+        self.bind_dn = bind_dn
+        self.bind_password = bind_password
+
+    def authenticate(self, username: str, password: str) -> bool:
+        """
+        Authenticate user against LDAP server.
+        In production, this would use `ldap3` library.
+        For now, we mock it or check against a secure hash if local.
+        """
+        # MOCK IMPLEMENTATION for v3.1 prototype
+        # Real implementation would be:
+        # server = Server(self.server_uri)
+        # conn = Connection(server, user=f"uid={username},{self.bind_dn}", password=password)
+        # return conn.bind()
+        
+        if username == "admin" and password == "grok_admin_2025":
+            return True
+        if username == "doctor" and password == "hippocratic":
+            return True
+            
+        return False
+
 if __name__ == "__main__":
     masker = PHIMasker()
     text = "Patient John Doe (MRN: 12345) admitted on 11/28/2025."
-    print(f"Original: {text}")
+    # print(f"Original: {text}") # Commented out to prevent log leakage
     print(f"Masked:   {masker.mask_text(text)}")
+

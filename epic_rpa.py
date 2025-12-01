@@ -172,7 +172,7 @@ class EpicWebAutomation:
 
         # Wait for patient chart to load
         self.page.wait_for_selector('.patient-header', timeout=10000)
-        print(f"Patient {mrn} loaded")
+        print(f"Patient loaded")
 
     def open_new_note(self, note_template: str = "Progress Note"):
         """

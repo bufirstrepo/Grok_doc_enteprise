@@ -93,6 +93,57 @@ class MEATValidator:
         if score == 1.0: return "✅ M.E.A.T. Compliant"
         if score >= 0.5: return "⚠️ Partial Documentation"
         return "❌ Non-Compliant"
+    
+    # ─── v6.5 ENTERPRISE: AI-Powered Suggestions ─────────────────────
+    
+    def suggest_improvements(self, soap_note: str, condition: str, validation_result: Dict) -> List[str]:
+        """
+        Generate AI-powered suggestions for missing M.E.A.T. elements.
+        
+        Args:
+            soap_note: Full text of the clinical note
+            condition: The condition being validated
+            validation_result: Output from validate() method
+            
+        Returns:
+            List of actionable suggestions
+        """
+        suggestions = []
+        missing = validation_result.get('missing', [])
+        
+        if not missing:
+            return ["✅ Documentation is M.E.A.T. compliant!"]
+        
+        # Template-based suggestions (In production, use LLM for context-aware hints)
+        templates = {
+            'Monitor': [
+                f"Add monitoring statement: \"Monitored {condition} - currently stable/worsening/improving\"",
+                f"Document disease progression: \"{condition} shows regression/stability/progression\"",
+                f"Include symptom tracking for {condition}"
+            ],
+            'Evaluate': [
+                f"Reference test results: \"Reviewed labs/imaging for {condition}\"",
+                f"Document response to treatment: \"{condition} response to [medication]\"",
+                f"Include objective findings from physical exam related to {condition}"
+            ],
+            'Assess': [
+                f"Add assessment statement: \"Assessed {condition} severity and impact\"",
+                f"Document treatment plan: \"Plan to adjust therapy for {condition}\"",
+                f"Include counseling note: \"Discussed {condition} management with patient\""
+            ],
+            'Treat': [
+                f"Document treatment: \"Prescribed/Continued [medication] for {condition}\"",
+                f"List therapies: \"Patient on [treatment regimen] for {condition}\"",
+                f"Note interventions: \"Referral to specialist for {condition} management\""
+            ]
+        }
+        
+        for element in missing:
+            if element in templates:
+                # Pick first suggestion from template
+                suggestions.append(f"**{element}**: {templates[element][0]}")
+        
+        return suggestions
 
 if __name__ == "__main__":
     validator = MEATValidator()
@@ -109,3 +160,10 @@ if __name__ == "__main__":
     print(f"Status: {result['status']}")
     print(f"Missing: {result['missing']}")
     print(f"Evidence: {result['evidence']}")
+    
+    # Test AI suggestions
+    if result['missing']:
+        suggestions = validator.suggest_improvements(note, "Diabetes", result)
+        print("\nAI-Powered Suggestions:")
+        for s in suggestions:
+            print(f"  - {s}")

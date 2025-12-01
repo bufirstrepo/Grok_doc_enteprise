@@ -210,11 +210,158 @@ class HCCEngine:
         if age <= 84: return '80-84'
         if age <= 89: return '85-89'
         return '90+'
+    
+    # ─── v6.5 ENTERPRISE: Batch Processing & Reporting ─────────────
+    
+    def batch_calculate(self, patients: List[Dict]) -> List[Dict]:
+        """
+        Calculate RAF scores for multiple patients.
+        
+        Args:
+            patients: List of patient dicts with keys: {mrn, age, gender, icd_codes}
+        
+        Returns:
+            List of results with RAF scores and revenue impact
+        """
+        results = []
+        for patient in patients:
+            mrn = patient.get('mrn', 'UNKNOWN')
+            age = patient.get('age', 65)
+            gender = patient.get('gender', 'M')
+            codes = patient.get('icd_codes', [])
+            
+            result = self.calculate_raf(age, gender, codes)
+            result['mrn'] = mrn
+            # Ensure 'estimated_revenue' exists for reporting compatibility
+            if 'revenue_impact' in result and 'estimated_revenue' not in result:
+                result['estimated_revenue'] = result['revenue_impact']
+            results.append(result)
+            
+        return results
+    
+    def generate_csv_report(self, results: List[Dict], filename: str = 'hcc_report.csv'):
+        """
+        Export batch RAF scores to CSV.
+        
+        Args:
+            results: Output from batch_calculate()
+            filename: Output filename
+        """
+        import csv
+        
+        with open(filename, 'w', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=[
+                'mrn', 'raf_score', 'hcc_count', 'revenue_impact'
+            ])
+            writer.writeheader()
+            
+            for r in results:
+                # Count HCCs from details array
+                hcc_count = len([d for d in r.get('details', []) if d.get('weight', 0) > 0])
+                
+                writer.writerow({
+                    'mrn': r.get('mrn', 'N/A'),
+                    'raf_score': round(r['raf_score'], 3),
+                    'hcc_count': hcc_count,
+                    'revenue_impact': f"${r.get('estimated_revenue', r.get('revenue_impact', 0)):,.2f}"
+                })
+        
+        return filename
+    
+    def generate_pdf_report(self, results: List[Dict], filename: str = 'hcc_report.pdf'):
+        """
+        Export batch RAF scores to PDF.
+        Uses reportlab for PDF generation.
+        
+        Args:
+            results: Output from batch_calculate()
+            filename: Output filename
+        """
+        try:
+            from reportlab.lib.pagesizes import letter
+            from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+            from reportlab.lib.styles import getSampleStyleSheet
+            from reportlab.lib import colors
+            
+            doc = SimpleDocTemplate(filename, pagesize=letter)
+            elements = []
+            styles = getSampleStyleSheet()
+            
+            # Title
+            title = Paragraph("<b>HCC Gap Analysis Report</b>", styles['Title'])
+            elements.append(title)
+            elements.append(Spacer(1, 12))
+            
+            # Summary
+            total_revenue = sum(r.get('estimated_revenue', r.get('revenue_impact', 0)) for r in results)
+            avg_raf = sum(r['raf_score'] for r in results) / len(results) if results else 0
+            
+            summary = Paragraph(f"""
+            <b>Summary:</b><br/>
+            Total Patients: {len(results)}<br/>
+            Average RAF Score: {avg_raf:.3f}<br/>
+            Total Revenue Impact: ${total_revenue:,.2f}
+            """, styles['Normal'])
+            elements.append(summary)
+            elements.append(Spacer(1, 12))
+            
+            # Table
+            data = [['MRN', 'RAF Score', 'HCC Count', 'Revenue Impact']]
+            for r in results[:50]:  # Limit to 50 for PDF readability
+                hcc_count = len([d for d in r.get('details', []) if d.get('weight', 0) > 0])
+                data.append([
+                    r.get('mrn', 'N/A'),
+                    f"{r['raf_score']:.3f}",
+                    str(hcc_count),
+                    f"${r.get('estimated_revenue', r.get('revenue_impact', 0)):,.2f}"
+                ])
+            
+            table = Table(data)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            elements.append(table)
+            
+            doc.build(elements)
+            return filename
+            
+        except ImportError:
+            # Fallback if reportlab not installed
+            print("reportlab not installed. Skipping PDF generation.")
+            return None
+
 
 if __name__ == "__main__":
     engine = HCCEngine()
+    
+    # Test batch processing
+    patients = [
+        {'mrn': 'P001', 'age': 72, 'gender': 'M', 'icd_codes': ['E11.9', 'I50.9', 'N18.4']},
+        {'mrn': 'P002', 'age': 68, 'gender': 'F', 'icd_codes': ['C34.90', 'J44.9']},
+        {'mrn': 'P003', 'age': 80, 'gender': 'M', 'icd_codes': ['N18.6', 'I48.91', 'E11.21']}
+    ]
+    
+    results = engine.batch_calculate(patients)
+    print(f"Processed {len(results)} patients")
+    
+    # Generate CSV
+    csv_file = engine.generate_csv_report(results)
+    print(f"CSV Report: {csv_file}")
+
+    # Generate PDF
+    pdf_file = engine.generate_pdf_report(results)
+    if pdf_file:
+        print(f"PDF Report: {pdf_file}")
+    
+    # Original single patient calculation output (kept for comparison)
     result = engine.calculate_raf(72, 'M', ['E11.9', 'I50.9', 'N18.3'])
-    print(f"RAF Score: {result['raf_score']}")
-    print(f"Revenue: ${result['revenue_impact']}")
+    print(f"\nSingle Patient RAF Score: {result['raf_score']}")
+    print(f"Single Patient Revenue: ${result['revenue_impact']}")
     for d in result['details']:
         print(f"- {d['desc']}: {d['weight']}")
+

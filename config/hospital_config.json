@@ -1,121 +1,88 @@
 {
-  "hospital_id": "demo_hospital",
   "hospital_name": "Demo Medical Center",
+  "site_id": "SITE-001",
   "ehr": {
-    "type": "epic",
-    "fhir_endpoint": "https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4",
-    "client_id": "",
-    "client_secret_env": "EPIC_CLIENT_SECRET",
-    "scopes": ["patient/*.read", "observation/*.read", "condition/*.read", "medicationrequest/*.read"],
-    "oauth_token_url": "",
-    "supports_bulk_export": false,
-    "hl7v2_enabled": false,
-    "hl7v2_port": 2575
+    "system": "epic",
+    "fhir_url": "https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4",
+    "client_id": "mock_client_id",
+    "client_secret": "EPIC_CLIENT_SECRET",
+    "auth_flow": "client_credentials"
   },
   "ai_tools": {
-    "aidoc": {
-      "enabled": false,
-      "api_endpoint": "https://api.aidoc.com/v1",
-      "api_key_env": "AIDOC_API_KEY",
-      "timeout_seconds": 30,
-      "priority": 1,
-      "fallback_enabled": true
+    "grok-beta": {
+      "backend": "xai_api",
+      "enabled": true,
+      "api_key_env": "XAI_API_KEY",
+      "max_tokens": 128000,
+      "temperature": 0.0
     },
-    "pathAI": {
-      "enabled": false,
-      "api_endpoint": "https://api.pathai.com/v1",
-      "api_key_env": "PATHOLOGY_API_KEY",
-      "timeout_seconds": 30,
-      "priority": 2,
-      "fallback_enabled": true
+    "claude-3-5-sonnet-20250620": {
+      "backend": "anthropic",
+      "enabled": true,
+      "api_key_env": "ANTHROPIC_KEY",
+      "max_tokens": 200000,
+      "temperature": 0.0
     },
-    "tempus": {
-      "enabled": false,
-      "api_endpoint": "https://api.tempus.com/api/v1",
-      "api_key_env": "TEMPUS_API_KEY",
-      "timeout_seconds": 30,
-      "priority": 2,
-      "fallback_enabled": true
+    "grok-4": {
+      "backend": "xai_api",
+      "enabled": true,
+      "api_key_env": "XAI_API_KEY",
+      "max_tokens": 128000,
+      "temperature": 0.1
     },
-    "butterfly_iq": {
-      "enabled": false,
-      "api_endpoint": "",
-      "api_key_env": "BUTTERFLY_API_KEY",
-      "timeout_seconds": 30,
-      "priority": 3,
-      "fallback_enabled": true
+    "grok-4-math": {
+      "backend": "xai_api",
+      "enabled": true,
+      "api_key_env": "XAI_API_KEY",
+      "max_tokens": 128000,
+      "temperature": 0.0
     },
-    "caption_health": {
-      "enabled": false,
-      "api_endpoint": "",
-      "api_key_env": "CAPTION_HEALTH_API_KEY",
-      "timeout_seconds": 30,
-      "priority": 3,
-      "fallback_enabled": true
+    "gemini-1.5-pro-002": {
+      "backend": "google",
+      "enabled": true,
+      "api_key_env": "GEMINI_KEY",
+      "max_tokens": 1000000,
+      "temperature": 0.0
     },
-    "ibm_watson": {
-      "enabled": false,
-      "api_endpoint": "",
-      "api_key_env": "IBM_WATSON_API_KEY",
-      "timeout_seconds": 30,
-      "priority": 2,
-      "fallback_enabled": true
+    "sonar-pro-online": {
+      "backend": "perplexity",
+      "enabled": true,
+      "api_key_env": "PPLX_KEY",
+      "max_tokens": 128000,
+      "temperature": 0.0
     },
-    "deepmind_health": {
-      "enabled": false,
-      "api_endpoint": "",
-      "api_key_env": "DEEPMIND_API_KEY",
-      "timeout_seconds": 30,
-      "priority": 2,
-      "fallback_enabled": true
-    },
-    "keragon": {
-      "enabled": false,
-      "api_endpoint": "",
-      "api_key_env": "KERAGON_API_KEY",
-      "timeout_seconds": 30,
-      "priority": 4,
-      "fallback_enabled": true
-    },
-    "nuance_dax": {
-      "enabled": false,
-      "api_endpoint": "",
-      "api_key_env": "NUANCE_DAX_API_KEY",
-      "timeout_seconds": 30,
-      "priority": 3,
-      "fallback_enabled": true
+    "claude-3-opus-2025": {
+      "backend": "anthropic",
+      "enabled": true,
+      "api_key_env": "ANTHROPIC_KEY",
+      "max_tokens": 200000,
+      "temperature": 0.0
     }
   },
   "features": {
-    "ambient_scribe": true,
-    "patient_messaging": true,
-    "discharge_summaries": true,
-    "risk_prediction": true,
-    "cds_hooks": true,
-    "multi_llm_chain": true,
-    "bayesian_analysis": true,
-    "continuous_learning": true,
-    "mobile_copilot": false
+    "enable_hcc_scoring": true,
+    "enable_meat_compliance": true,
+    "enable_clinical_trials": true,
+    "enable_sepsis_prediction": true,
+    "enable_readmission_risk": true,
+    "enable_denial_prediction": true,
+    "enable_sdoh_screening": true,
+    "enable_peer_review": true
   },
   "compliance": {
-    "network_subnets": ["10.0.0.0/8", "192.168.0.0/16"],
-    "require_wifi_check": false,
-    "audit_retention_days": 2555,
-    "ssl_cert_pinning": false,
-    "hospital_internal_host": "internal-ehr.hospital.local",
-    "hospital_internal_port": 443,
-    "expected_cert_sha256": "",
-    "ssid_keywords": ["Hospital-Secure", "HOSP-CLINICAL"]
+    "require_wifi": true,
+    "wifi_keywords": [
+      "Hospital-Secure",
+      "HOSP-CLINICAL"
+    ],
+    "audit_log_path": "audit.db",
+    "encryption_enabled": true,
+    "ldap_enabled": false,
+    "ldap_server": "ldap://localhost"
   },
-  "llm": {
-    "default_model": "llama-3.1-70b",
-    "grok_enabled": false,
-    "grok_api_key_env": "GROK_API_KEY",
-    "grok_has_baa": false,
-    "temperature": 0.0,
-    "max_tokens": 2048,
-    "fallback_model": "llama-3.1-70b"
-  },
-  "created_at": "2025-01-01T00:00:00Z",
-  "updated_at": "2025-01-01T00:00:00Z"
+  "llm_config": {
+    "default_model": "grok-beta",
+    "chain_mode_enabled": true,
+    "fast_mode_enabled": true
+  }
 }

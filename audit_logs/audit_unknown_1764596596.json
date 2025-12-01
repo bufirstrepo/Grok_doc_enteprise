@@ -1,0 +1,155 @@
+{
+  "chain_id": "a6666ae09296554804dbadf470e892b676fb637abde385520019b4b8c5996308c83b093349434fc860e1167b7a0843417b72fe077ad3db0ae583b025514d9330",
+  "genesis_hash": "GENESIS_CHAIN",
+  "steps": [
+    {
+      "step_name": "Kinetics Model",
+      "prompt": "PATIENT: {'age': 72, 'gender': 'Male', 'labs': 'Cr: 1.8, WBC: 14.2'}\nQUESTION: Safe vancomycin dose for septic shock?\nBAYESIAN: {'prob_safe': 0.85, 'n_cases': 150, 'ci_low': 0.78, 'ci_high': 0.91}\nEVIDENCE: - Case 1: Vancomycin in elderly male with AKI\n- Case 2: Septic shock management guidelines\nTASK: Pharmacokinetic calculation and dose recommendation.",
+      "response": "Perspective strength: [8]\nCredence: >75%\nKey PK uncertainty: None\n\nKinetics: 1000mg q12h",
+      "timestamp": "2025-12-01T08:43:16.160488Z",
+      "prev_hash": "GENESIS_CHAIN",
+      "step_hash": "1e958985791afd0f0d8d74067904510fb02587af189c46fca99121815ab89b1aa4279196cd990aa92106bf01c2d691a20a30464212d9014957ca4dea37463212",
+      "confidence": 0.8,
+      "model_name": null,
+      "execution_time_ms": 0.029905999326729216,
+      "tokens_used": null,
+      "data_sufficiency": null,
+      "confidence_interval": null,
+      "structured_data": {
+        "perspective_strength": 8,
+        "credence": ">75%",
+        "key_uncertainty": "None"
+      },
+      "all_responses": [
+        [
+          "Perspective strength: [8]\nCredence: >75%\nKey PK uncertainty: None\n\nKinetics: 1000mg q12h",
+          {
+            "perspective_strength": 8,
+            "credence": ">75%",
+            "key_uncertainty": "None"
+          }
+        ]
+      ]
+    },
+    {
+      "step_name": "Adversarial Model",
+      "prompt": "PATIENT: {'age': 72, 'gender': 'Male', 'labs': 'Cr: 1.8, WBC: 14.2'}\nQUESTION: Safe vancomycin dose for septic shock?\nPROPOSED: Perspective strength: [8]\nCredence: >75%\nKey PK uncertainty: None\n\nKinetics: 1000mg q12h\nTASK: Disassemble and verify coding/terminology.",
+      "response": "Perspective strength: [9]\nCredence: >75%\nKey coding uncertainty: None\n\nAdversarial: Risk of nephrotoxicity\nFINAL CODING SCORE: [0.9]",
+      "timestamp": "2025-12-01T08:43:16.160528Z",
+      "prev_hash": "1e958985791afd0f0d8d74067904510fb02587af189c46fca99121815ab89b1aa4279196cd990aa92106bf01c2d691a20a30464212d9014957ca4dea37463212",
+      "step_hash": "1c62cf2fb1b9be3ffba31181caa248236141d132c8116e145d4ce51172c803b6df5925ab7b9f9a444be73d3423b895b42f614a3ac2cfca8a5c485e111a98a8ce",
+      "confidence": 0.9,
+      "model_name": null,
+      "execution_time_ms": 0.021361000108299777,
+      "tokens_used": null,
+      "data_sufficiency": null,
+      "confidence_interval": null,
+      "structured_data": {
+        "perspective_strength": 9,
+        "credence": ">75%",
+        "key_uncertainty": "None"
+      },
+      "all_responses": [
+        [
+          "Perspective strength: [9]\nCredence: >75%\nKey coding uncertainty: None\n\nAdversarial: Risk of nephrotoxicity\nFINAL CODING SCORE: [0.9]",
+          {
+            "perspective_strength": 9,
+            "credence": ">75%",
+            "key_uncertainty": "None"
+          }
+        ]
+      ]
+    },
+    {
+      "step_name": "Red Team",
+      "prompt": "PATIENT: {'age': 72, 'gender': 'Male', 'labs': 'Cr: 1.8, WBC: 14.2'}\nPROPOSED: Perspective strength: [8]\nCredence: >75%\nKey PK uncertainty: None\n\nKinetics: 1000mg q12h\nVERIFICATION: Perspective strength: [9]\nCredence: >75%\nKey coding uncertainty: None\n\nAdversarial: Risk of nephrotoxicity\nFINAL CODING SCORE: [0.9]\nTASK: ATTACK. Find contraindications/risks.",
+      "response": "Perspective strength: [7]\nCredence: 25-75%\nKey safety uncertainty: Renal function\n\nRed Team: Monitor renal function\nFINAL SAFETY SCORE: [0.85]",
+      "timestamp": "2025-12-01T08:43:16.160558Z",
+      "prev_hash": "1c62cf2fb1b9be3ffba31181caa248236141d132c8116e145d4ce51172c803b6df5925ab7b9f9a444be73d3423b895b42f614a3ac2cfca8a5c485e111a98a8ce",
+      "step_hash": "090193601c6a1745976acc10855d57973994d7da33c6b18ecdf5891bac76f393bec70a0cbf9d4b0956539631a2f04ff862b0f03c8ea4f43ce4ab1ccdefb1d9e1",
+      "confidence": 0.7,
+      "model_name": null,
+      "execution_time_ms": 0.015929999790387228,
+      "tokens_used": null,
+      "data_sufficiency": null,
+      "confidence_interval": null,
+      "structured_data": {
+        "perspective_strength": 7,
+        "credence": "25-75%",
+        "key_uncertainty": "Renal function"
+      },
+      "all_responses": [
+        [
+          "Perspective strength: [7]\nCredence: 25-75%\nKey safety uncertainty: Renal function\n\nRed Team: Monitor renal function\nFINAL SAFETY SCORE: [0.85]",
+          {
+            "perspective_strength": 7,
+            "credence": "25-75%",
+            "key_uncertainty": "Renal function"
+          }
+        ]
+      ]
+    },
+    {
+      "step_name": "Literature Model",
+      "prompt": "SCENARIO: Safe vancomycin dose for septic shock?\nPROPOSED: Perspective strength: [8]\nCredence: >75%\nKey PK uncertainty: None\n\nKinetics: 1000mg q12h\nATTACK: Perspective strength: [7]\nCredence: 25-75%\nKey safety uncertainty: Renal function\n\nRed Team: Monitor renal function\nFINAL SAFETY SCORE: [0.85]\nTASK: Evidence check (2023-2025).",
+      "response": "Perspective strength: [8]\nCredence: >75%\nKey evidence uncertainty: None\n\nLiterature: 2024 IDSA guidelines support AUC-based dosing\nEVIDENCE STRENGTH: [0.9]",
+      "timestamp": "2025-12-01T08:43:16.160585Z",
+      "prev_hash": "090193601c6a1745976acc10855d57973994d7da33c6b18ecdf5891bac76f393bec70a0cbf9d4b0956539631a2f04ff862b0f03c8ea4f43ce4ab1ccdefb1d9e1",
+      "step_hash": "84b86a50953747726f86f5881a811639809850cf5679925903ce046d217e65118f8c8f0432ff866e33e9e46dca618623ad64367eb739afe880c7f9977f52d3ee",
+      "confidence": 0.8,
+      "model_name": null,
+      "execution_time_ms": 0.014676999853691086,
+      "tokens_used": null,
+      "data_sufficiency": null,
+      "confidence_interval": null,
+      "structured_data": {
+        "perspective_strength": 8,
+        "credence": ">75%",
+        "key_uncertainty": "None"
+      },
+      "all_responses": [
+        [
+          "Perspective strength: [8]\nCredence: >75%\nKey evidence uncertainty: None\n\nLiterature: 2024 IDSA guidelines support AUC-based dosing\nEVIDENCE STRENGTH: [0.9]",
+          {
+            "perspective_strength": 8,
+            "credence": ">75%",
+            "key_uncertainty": "None"
+          }
+        ]
+      ]
+    },
+    {
+      "step_name": "Arbiter Tribunal",
+      "prompt": "PATIENT: {'age': 72, 'gender': 'Male', 'labs': 'Cr: 1.8, WBC: 14.2'}\nQUESTION: Safe vancomycin dose for septic shock?\nINPUTS:\nPharmacologist: Perspective strength: [8]\nCredence: >75%\nKey PK uncertainty: None\n\nKinetics: 1000mg q12h\nBlue Team: Perspective strength: [9]\nCredence: >75%\nKey coding uncertainty: None\n\nAdversarial: Risk of nephrotoxicity\nFINAL CODING SCORE: [0.9]\nRed Team: Perspective strength: [7]\nCredence: 25-75%\nKey safety uncertainty: Renal function\n\nRed Team: Monitor renal function\nFINAL SAFETY SCORE: [0.85]\nResearcher: Perspective strength: [8]\nCredence: >75%\nKey evidence uncertainty: None\n\nLiterature: 2024 IDSA guidelines support AUC-based dosing\nEVIDENCE STRENGTH: [0.9]",
+      "response": "Tribunal Decision: APPROVED (Mean: 0.90, StdDev: 0.00)",
+      "timestamp": "2025-12-01T08:43:16.160712Z",
+      "prev_hash": "84b86a50953747726f86f5881a811639809850cf5679925903ce046d217e65118f8c8f0432ff866e33e9e46dca618623ad64367eb739afe880c7f9977f52d3ee",
+      "step_hash": "a6666ae09296554804dbadf470e892b676fb637abde385520019b4b8c5996308c83b093349434fc860e1167b7a0843417b72fe077ad3db0ae583b025514d9330",
+      "confidence": 0.9,
+      "model_name": null,
+      "execution_time_ms": 0.016821999452076852,
+      "tokens_used": null,
+      "data_sufficiency": null,
+      "confidence_interval": null,
+      "structured_data": {
+        "mean_confidence": 0.9,
+        "residual": 0.0,
+        "decisions": [
+          "APPROVED"
+        ],
+        "final_decision": "APPROVED"
+      },
+      "all_responses": [
+        [
+          "Perspective strength: [9]\nCredence: >75%\nKey uncertainty: None\n\nTribunal Decision: APPROVED\nConfidence: 0.94",
+          {
+            "perspective_strength": 9,
+            "credence": ">75%",
+            "key_uncertainty": "None"
+          }
+        ]
+      ]
+    }
+  ],
+  "verified": true
+}

@@ -1,0 +1,167 @@
+{
+  "chain_id": "1af6188e7ec75177c9c6373bc9dd03a9c5ae4245e1f3e5d537d4428c5bc10b35",
+  "genesis_hash": "GENESIS_CHAIN",
+  "steps": [
+    {
+      "step_name": "Scribe",
+      "prompt": "PATIENT: {'age': 72, 'gender': 'Male', 'labs': 'Cr: 1.8, WBC: 14.2'}\nQUESTION: Safe vancomycin dose for septic shock?\nTASK: Transcribe and structure the clinical context into a standardized format.",
+      "response": "Perspective strength: [9]\nCredence: >75%\nKey uncertainty: None\n\nScribe: Patient is 72M with septic shock.",
+      "timestamp": "2025-12-01T10:51:09.306565Z",
+      "prev_hash": "GENESIS_CHAIN",
+      "step_hash": "cfd5ed82fb21e329c6aec78b88c78e2d38d3e0fb7f09a4ba771a115d9b63177b",
+      "confidence": 0.9,
+      "model_name": "claude-3.5-sonnet",
+      "execution_time_ms": 0.03875199763569981,
+      "structured_data": {
+        "perspective_strength": 9,
+        "credence": ">75%",
+        "key_uncertainty": "None"
+      },
+      "all_responses": [
+        [
+          "Perspective strength: [9]\nCredence: >75%\nKey uncertainty: None\n\nScribe: Patient is 72M with septic shock.",
+          {
+            "perspective_strength": 9,
+            "credence": ">75%",
+            "key_uncertainty": "None"
+          }
+        ]
+      ]
+    },
+    {
+      "step_name": "Kinetics Model",
+      "prompt": "PATIENT_CONTEXT: Perspective strength: [9]\nCredence: >75%\nKey uncertainty: None\n\nScribe: Patient is 72M with septic shock.\nQUESTION: Safe vancomycin dose for septic shock?\nBAYESIAN: {'prob_safe': 0.85, 'n_cases': 150, 'ci_low': 0.78, 'ci_high': 0.91}\nEVIDENCE: - Case 1: Vancomycin in elderly male with AKI\n- Case 2: Septic shock management guidelines\nTASK: Pharmacokinetic calculation and dose recommendation.",
+      "response": "Perspective strength: [9]\nCredence: >75%\nKey PK uncertainty: None\n\nKinetics: 1000mg q12h",
+      "timestamp": "2025-12-01T10:51:09.306651Z",
+      "prev_hash": "cfd5ed82fb21e329c6aec78b88c78e2d38d3e0fb7f09a4ba771a115d9b63177b",
+      "step_hash": "52ceb72dff3a3b95c98359fd45077ade920e545ed9ae207043445ad465f3c17c",
+      "confidence": 0.9,
+      "model_name": "grok-beta",
+      "execution_time_ms": 0.029095001082168892,
+      "structured_data": {
+        "perspective_strength": 9,
+        "credence": ">75%",
+        "key_uncertainty": "None"
+      },
+      "all_responses": [
+        [
+          "Perspective strength: [9]\nCredence: >75%\nKey PK uncertainty: None\n\nKinetics: 1000mg q12h",
+          {
+            "perspective_strength": 9,
+            "credence": ">75%",
+            "key_uncertainty": "None"
+          }
+        ]
+      ]
+    },
+    {
+      "step_name": "Adversarial Model",
+      "prompt": "PATIENT: {'age': 72, 'gender': 'Male', 'labs': 'Cr: 1.8, WBC: 14.2'}\nQUESTION: Safe vancomycin dose for septic shock?\nPROPOSED: Perspective strength: [9]\nCredence: >75%\nKey PK uncertainty: None\n\nKinetics: 1000mg q12h\nTASK: Disassemble and verify coding/terminology.",
+      "response": "Perspective strength: [8]\nCredence: >75%\nKey coding uncertainty: None\n\nAdversarial: Risk of nephrotoxicity",
+      "timestamp": "2025-12-01T10:51:09.306694Z",
+      "prev_hash": "52ceb72dff3a3b95c98359fd45077ade920e545ed9ae207043445ad465f3c17c",
+      "step_hash": "6a105e98b97cfc5f3ab6ec13bd004110f5fb611c0deffab74e6ea8c0323c083c",
+      "confidence": 0.8,
+      "model_name": "claude-3.5-sonnet",
+      "execution_time_ms": 0.01803399936761707,
+      "structured_data": {
+        "perspective_strength": 8,
+        "credence": ">75%",
+        "key_uncertainty": "None"
+      },
+      "all_responses": [
+        [
+          "Perspective strength: [8]\nCredence: >75%\nKey coding uncertainty: None\n\nAdversarial: Risk of nephrotoxicity",
+          {
+            "perspective_strength": 8,
+            "credence": ">75%",
+            "key_uncertainty": "None"
+          }
+        ]
+      ]
+    },
+    {
+      "step_name": "Red Team",
+      "prompt": "PATIENT: {'age': 72, 'gender': 'Male', 'labs': 'Cr: 1.8, WBC: 14.2'}\nPROPOSED: Perspective strength: [9]\nCredence: >75%\nKey PK uncertainty: None\n\nKinetics: 1000mg q12h\nVERIFICATION: Perspective strength: [8]\nCredence: >75%\nKey coding uncertainty: None\n\nAdversarial: Risk of nephrotoxicity\nTASK: ATTACK. Find contraindications/risks.",
+      "response": "Perspective strength: [9]\nCredence: >75%\nKey safety uncertainty: None\n\nRed Team: Monitor Cr closely",
+      "timestamp": "2025-12-01T10:51:09.306732Z",
+      "prev_hash": "6a105e98b97cfc5f3ab6ec13bd004110f5fb611c0deffab74e6ea8c0323c083c",
+      "step_hash": "6df4362421ee5ee95703fd8ad6167829bc97020419cc331b662ccbc1f1837ae2",
+      "confidence": 0.9,
+      "model_name": "grok-beta",
+      "execution_time_ms": 0.016791000234661624,
+      "structured_data": {
+        "perspective_strength": 9,
+        "credence": ">75%",
+        "key_uncertainty": "None"
+      },
+      "all_responses": [
+        [
+          "Perspective strength: [9]\nCredence: >75%\nKey safety uncertainty: None\n\nRed Team: Monitor Cr closely",
+          {
+            "perspective_strength": 9,
+            "credence": ">75%",
+            "key_uncertainty": "None"
+          }
+        ]
+      ]
+    },
+    {
+      "step_name": "Literature Model",
+      "prompt": "SCENARIO: Safe vancomycin dose for septic shock?\nPROPOSED: Perspective strength: [9]\nCredence: >75%\nKey PK uncertainty: None\n\nKinetics: 1000mg q12h\nATTACK: Perspective strength: [9]\nCredence: >75%\nKey safety uncertainty: None\n\nRed Team: Monitor Cr closely\nTASK: Evidence check (2023-2025).",
+      "response": "Perspective strength: [9]\nCredence: >75%\nKey evidence uncertainty: None\n\nLiterature: Guidelines support this",
+      "timestamp": "2025-12-01T10:51:09.306769Z",
+      "prev_hash": "6df4362421ee5ee95703fd8ad6167829bc97020419cc331b662ccbc1f1837ae2",
+      "step_hash": "80f97ed28e00af52b3f711f09bf6bf16907abb865116bc2229a1a6dde1718562",
+      "confidence": 0.9,
+      "model_name": "grok-beta",
+      "execution_time_ms": 0.01647099998081103,
+      "structured_data": {
+        "perspective_strength": 9,
+        "credence": ">75%",
+        "key_uncertainty": "None"
+      },
+      "all_responses": [
+        [
+          "Perspective strength: [9]\nCredence: >75%\nKey evidence uncertainty: None\n\nLiterature: Guidelines support this",
+          {
+            "perspective_strength": 9,
+            "credence": ">75%",
+            "key_uncertainty": "None"
+          }
+        ]
+      ]
+    },
+    {
+      "step_name": "Arbiter Tribunal",
+      "prompt": "PATIENT: {'age': 72, 'gender': 'Male', 'labs': 'Cr: 1.8, WBC: 14.2'}\nQUESTION: Safe vancomycin dose for septic shock?\nINPUTS:\nScribe: Perspective strength: [9]\nCredence: >75%\nKey uncertainty: None\n\nScribe: Patient is 72M with septic shock.\nPharmacologist: Perspective strength: [9]\nCredence: >75%\nKey PK uncertainty: None\n\nKinetics: 1000mg q12h\nBlue Team: Perspective strength: [8]\nCredence: >75%\nKey coding uncertainty: None\n\nAdversarial: Risk of nephrotoxicity\nRed Team: Perspective strength: [9]\nCredence: >75%\nKey safety uncertainty: None\n\nRed Team: Monitor Cr closely\nResearcher: Perspective strength: [9]\nCredence: >75%\nKey evidence uncertainty: None\n\nLiterature: Guidelines support this",
+      "response": "Tribunal Decision: APPROVED (Mean: 0.90, StdDev: 0.00)",
+      "timestamp": "2025-12-01T10:51:09.306988Z",
+      "prev_hash": "80f97ed28e00af52b3f711f09bf6bf16907abb865116bc2229a1a6dde1718562",
+      "step_hash": "1af6188e7ec75177c9c6373bc9dd03a9c5ae4245e1f3e5d537d4428c5bc10b35",
+      "confidence": 0.9,
+      "model_name": "claude-3.5-sonnet",
+      "execution_time_ms": 0.018495000404072925,
+      "structured_data": {
+        "mean_confidence": 0.9,
+        "residual": 0.0,
+        "decisions": [
+          "APPROVED"
+        ],
+        "final_decision": "APPROVED"
+      },
+      "all_responses": [
+        [
+          "Perspective strength: [9]\nCredence: >75%\nKey uncertainty: None\n\nTribunal Decision: APPROVED\nConfidence: 0.94",
+          {
+            "perspective_strength": 9,
+            "credence": ">75%",
+            "key_uncertainty": "None"
+          }
+        ]
+      ]
+    }
+  ],
+  "verified": true,
+  "status": "COMPLETED"
+}

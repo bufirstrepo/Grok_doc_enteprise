@@ -308,11 +308,11 @@ class TestMultiLLMChainLogic(unittest.TestCase):
             "prev_hash_123",
             timestamp
         )
-
-        # BLAKE2b hex digest is 128 characters
-        self.assertEqual(len(hash1), 128)
-
-        # Same inputs should produce same hash
+    
+        # BLAKE3 hex digest is 64 characters (256 bits)
+        self.assertEqual(len(hash1), 64)
+        
+        # Deterministic check
         hash2 = chain._compute_step_hash(
             "Test Step",
             "Test prompt",
@@ -321,129 +321,148 @@ class TestMultiLLMChainLogic(unittest.TestCase):
             timestamp
         )
         self.assertEqual(hash1, hash2)
-
-        # Different inputs should produce different hash
+        
+        # Avalanche effect check
         hash3 = chain._compute_step_hash(
             "Test Step",
-            "Different prompt",
-            "Test response",
+            "Test prompt",
+            "Test response changed",
             "prev_hash_123",
             timestamp
         )
         self.assertNotEqual(hash1, hash3)
 
-    @patch('llm_chain.grok_query')
-    def test_full_chain_execution(self, mock_grok):
-        """Test full 4-stage chain execution"""
-        # Mock responses must be dicts because safe_grok_query expects resp["text"]
+    @patch('llm_chain.ModelRouter')
+    def test_full_chain_execution(self, MockRouter):
+        # Setup mock router instance
+        mock_router_instance = MockRouter.return_value
+        
+        # Mock responses for the 6 stages
+        # Scribe, Kinetics, Blue Team, Red Team, Literature, Arbiter
         mock_responses = [
-            {"text": "Perspective strength: [8]\nCredence: >75%\nKey PK uncertainty: None\n\nKinetics: 1000mg q12h"},
-            {"text": "Perspective strength: [9]\nCredence: >75%\nKey coding uncertainty: None\n\nAdversarial: Risk of nephrotoxicity\nFINAL CODING SCORE: [0.9]"},
-            {"text": "Perspective strength: [7]\nCredence: 25-75%\nKey safety uncertainty: Renal function\n\nRed Team: Monitor renal function\nFINAL SAFETY SCORE: [0.85]"},
-            {"text": "Perspective strength: [8]\nCredence: >75%\nKey evidence uncertainty: None\n\nLiterature: 2024 IDSA guidelines support AUC-based dosing\nEVIDENCE STRENGTH: [0.9]"},
-            # Arbiter returns JSON string in "text" or directly? 
-            # safe_grok_query returns resp["text"]. _run_arbiter_model parses that text as JSON.
-            {"text": json.dumps({
-                "decision": "APPROVED",
-                "action": "1000mg q12h",
-                "safety_score": 0.94,
-                "confidence_interval": "0.94 [0.89-0.99]",
-                "data_sufficiency": 0.92,
-                "regulatory_check": "Compliant",
-                "guideline": "IDSA 2025",
-                "risk_analysis": "None",
-                "evidence_table": {},
-                "bias_check": "None"
-            })}
+            # Scribe (JSON)
+            '{"subjective": ["Patient is 72M"], "plan": ["Monitor"]}',
+            # Kinetics
+            "Calculated dose: 1000mg. Math: ...",
+            # Blue Team
+            "AUDIT_PASS",
+            # Red Team
+            "NO LETHAL FLAW",
+            # Literature
+            "EVIDENCE_GRADE: A",
+            # Arbiter
+            "Final Decision: APPROVED. Risks low."
         ]
-        mock_grok.side_effect = mock_responses
-
-        chain = MultiLLMChain()
+        mock_router_instance.route_request.side_effect = mock_responses
+    
+        # Mock personas to have only 1 per stage to match mock_responses count
+        mock_personas = {
+            "scribe": ["Scribe Persona"],
+            "kinetics": ["Kinetics Persona"],
+            "adversarial": ["Adversarial Persona"],
+            "red_team": ["Red Team Persona"],
+            "literature": ["Literature Persona"],
+            "arbiter": ["Arbiter Persona"]
+        }
+        
+        chain = MultiLLMChain(personas=mock_personas)
         result = chain.run_chain(
             self.patient_context,
             self.query,
             self.retrieved_cases,
             self.bayesian_result
         )
-
+    
         # Check result structure
         print(f"DEBUG RESULT: {result}")
-        self.assertIn('chain_steps', result)
-        self.assertIn('final_recommendation', result)
-        self.assertIn('final_confidence', result)
-        self.assertIn('chain_hash', result)
-        self.assertIn('total_steps', result)
+        self.assertIn('chain_export', result)
+        self.assertIn('final_decision', result)
+        self.assertIn('confidence', result)
+    
+        # Check 6 steps executed
+        self.assertEqual(len(result['chain_export']['steps']), 6)
+        self.assertTrue(result['chain_export']['verified'])
+        self.assertEqual(result['final_decision'], "APPROVED")
 
-        # Check 5 steps executed (Kinetics, Blue, Red, Lit, Arbiter)
-        self.assertEqual(result['total_steps'], 5)
-        self.assertEqual(len(result['chain_steps']), 5)
-
-    @patch('llm_chain.grok_query')
-    def test_chain_verification(self, mock_grok):
-        """Test hash chain integrity verification"""
-        # Mock generic response
-        mock_grok.return_value = {"text": "Perspective strength: [8]\nCredence: >75%\nKey uncertainty: None\n\nTest response"}
-        # Note: run_chain calls grok_query 5 times. return_value handles all calls.
-        # But Arbiter expects JSON. So we need side_effect or a smart return_value.
-        # Let's use side_effect for the 5 calls.
+    @patch('llm_chain.ModelRouter')
+    def test_chain_verification(self, MockRouter):
+        """Test chain integrity verification"""
+        mock_router_instance = MockRouter.return_value
         
-        arbiter_json = json.dumps({
-            "decision": "APPROVED",
-            "action": "Test Action",
-            "safety_score": 0.9,
-            "confidence_interval": "0.9 [0.8-1.0]",
-            "data_sufficiency": 0.9,
-            "regulatory_check": "Compliant",
-            "guideline": "N/A",
-            "risk_analysis": "None",
-            "evidence_table": {},
-            "bias_check": "None"
-        })
-        
-        mock_grok.side_effect = [
-            {"text": "Perspective strength: [8]\nCredence: >75%\nKey uncertainty: None\n\nResponse 1"},
-            {"text": "Perspective strength: [8]\nCredence: >75%\nKey uncertainty: None\n\nResponse 2"},
-            {"text": "Perspective strength: [8]\nCredence: >75%\nKey uncertainty: None\n\nResponse 3"},
-            {"text": "Perspective strength: [8]\nCredence: >75%\nKey uncertainty: None\n\nResponse 4"},
-            {"text": arbiter_json}
+        # Mock responses for 6 steps
+        mock_responses = [
+            '{"json": "data"}', # Scribe
+            "Kinetics Response",
+            "Blue Team Response",
+            "Red Team Response",
+            "Literature Response",
+            "Arbiter Response"
         ]
-
-        chain = MultiLLMChain()
-        chain.run_chain(
-            self.patient_context,
-            self.query,
-            self.retrieved_cases,
-            self.bayesian_result
-        )
-
-        # Chain should be valid
+        mock_router_instance.route_request.side_effect = mock_responses
+        
+        # Mock personas to have only 1 per stage to match mock_responses count
+        mock_personas = {
+            "scribe": ["Scribe Persona"],
+            "kinetics": ["Kinetics Persona"],
+            "adversarial": ["Adversarial Persona"],
+            "red_team": ["Red Team Persona"],
+            "literature": ["Literature Persona"],
+            "arbiter": ["Arbiter Persona"]
+        }
+        
+        chain = MultiLLMChain(personas=mock_personas)
+        result = chain.run_chain(self.patient_context, self.query, [], {})
+        
+        # Verify valid chain
         self.assertTrue(chain.verify_chain())
-
-        # Tamper with a step
-        if len(chain.chain_history) > 0:
-            chain.chain_history[1].response = "TAMPERED RESPONSE"
-
-        # Chain should now be invalid
+        
+        # Tamper with chain
+        # Since ChainStep is frozen, we can't modify it directly.
+        # We have to replace an item in the list with a tampered one.
+        original_step = chain.chain_history[1]
+        
+        # Create a tampered step. We have to compute a valid hash for the *tampered* content 
+        # to pass __post_init__, but it won't match the *chain* integrity (next step's prev_hash).
+        # Actually, verify_chain checks if re-computing hash matches stored hash.
+        # If we create a new step with modified response but OLD hash, __post_init__ will fail.
+        # So we can't easily create an "invalid" step object in v10.1 because of the strict check!
+        # This is a feature, not a bug.
+        # To test verification failure, we can manually append a step that doesn't link correctly
+        # or use `object.__setattr__` to bypass frozen check if we really want to simulate corruption.
+        
+        object.__setattr__(original_step, 'response', "TAMPERED_RESPONSE")
+        
+        # Now verify should fail because re-computed hash won't match stored hash
         self.assertFalse(chain.verify_chain())
 
-
 class TestChainStepDataclass(unittest.TestCase):
-    """Test ChainStep dataclass"""
-
     def test_chain_step_creation(self):
         """Test ChainStep can be created with all fields"""
+        # In v10.1, we must provide the CORRECT hash
+        from llm_chain import blake3_hash
+        
+        step_name = "Test Model"
+        prompt = "Test prompt"
+        response = "Test response"
+        timestamp = "2025-11-18T12:00:00Z"
+        prev_hash = "abc1234567890abcdef1234567890abcdef" # Arbitrary
+        
+        # Compute valid hash
+        content = f"{prev_hash}|{step_name}|{prompt}|{response}|{timestamp}"
+        valid_hash = blake3_hash(content)
+        
         step = ChainStep(
-            step_name="Test Model",
-            prompt="Test prompt",
-            response="Test response",
-            timestamp="2025-11-18T12:00:00Z",
-            prev_hash="abc123",
-            step_hash="def456",
-            confidence=0.85
+            step_name=step_name,
+            prompt=prompt,
+            response=response,
+            timestamp=timestamp,
+            prev_hash=prev_hash,
+            step_hash=valid_hash,
+            confidence=1.0 # Default is 1.0 now
         )
-
-        self.assertEqual(step.step_name, "Test Model")
-        self.assertEqual(step.confidence, 0.85)
+        
+        self.assertEqual(step.step_name, step_name)
+        self.assertEqual(step.confidence, 1.0)
 
 
 if __name__ == '__main__':

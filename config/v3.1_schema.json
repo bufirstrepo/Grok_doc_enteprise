@@ -1,0 +1,183 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Grok Doc Enterprise v3.1 Configuration",
+    "type": "object",
+    "required": [
+        "hospital_name",
+        "site_id",
+        "ehr",
+        "ai_tools",
+        "features",
+        "compliance",
+        "llm_config"
+    ],
+    "properties": {
+        "hospital_name": {
+            "type": "string"
+        },
+        "site_id": {
+            "type": "string"
+        },
+        "ehr": {
+            "type": "object",
+            "required": [
+                "system",
+                "fhir_url",
+                "client_id"
+            ],
+            "properties": {
+                "system": {
+                    "type": "string",
+                    "enum": [
+                        "Epic",
+                        "Cerner",
+                        "Allscripts",
+                        "Athena",
+                        "Meditech",
+                        "Other"
+                    ]
+                },
+                "fhir_url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "client_id": {
+                    "type": "string"
+                },
+                "client_secret": {
+                    "type": "string"
+                },
+                "auth_flow": {
+                    "type": "string",
+                    "enum": [
+                        "client_credentials",
+                        "authorization_code"
+                    ],
+                    "default": "client_credentials"
+                }
+            }
+        },
+        "ai_tools": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "object",
+                "required": [
+                    "backend",
+                    "enabled"
+                ],
+                "properties": {
+                    "backend": {
+                        "type": "string",
+                        "enum": [
+                            "xai_api",
+                            "azure_openai",
+                            "anthropic",
+                            "google",
+                            "vllm"
+                        ]
+                    },
+                    "enabled": {
+                        "type": "boolean"
+                    },
+                    "api_key_env": {
+                        "type": "string"
+                    },
+                    "model_path": {
+                        "type": "string"
+                    },
+                    "max_tokens": {
+                        "type": "integer",
+                        "default": 2048
+                    },
+                    "temperature": {
+                        "type": "number",
+                        "default": 0.0
+                    }
+                }
+            }
+        },
+        "features": {
+            "type": "object",
+            "properties": {
+                "enable_hcc_scoring": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "enable_meat_compliance": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "enable_clinical_trials": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "enable_sepsis_prediction": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "enable_readmission_risk": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "enable_denial_prediction": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "enable_sdoh_screening": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "enable_peer_review": {
+                    "type": "boolean",
+                    "default": false
+                }
+            }
+        },
+        "compliance": {
+            "type": "object",
+            "properties": {
+                "require_wifi": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "wifi_keywords": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "audit_log_path": {
+                    "type": "string",
+                    "default": "audit.db"
+                },
+                "encryption_enabled": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "ldap_enabled": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "ldap_server": {
+                    "type": "string"
+                }
+            }
+        },
+        "llm_config": {
+            "type": "object",
+            "properties": {
+                "default_model": {
+                    "type": "string"
+                },
+                "chain_mode_enabled": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "fast_mode_enabled": {
+                    "type": "boolean",
+                    "default": true
+                }
+            }
+        }
+    }
+}

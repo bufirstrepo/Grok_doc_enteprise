@@ -189,7 +189,7 @@ class EpicFHIRClient(EHRClient):
             data = self._make_request('GET', f'Patient/{patient_id}')
             return self._parse_patient(data)
         except Exception as e:
-            print(f"Error fetching patient {patient_id}: {e}")
+            print(f"Error fetching patient: {e}")
             return None
     
     def _parse_patient(self, data: Dict) -> PatientData:

@@ -1,50 +1,57 @@
-# 🩺 Grok Doc v2.0 - Multi-LLM Clinical AI Co-Pilot
+# 🩺 Grok Doc v6.5 Enterprise - Multi-LLM Clinical AI Platform
 
-**Zero-cloud, hospital-native clinical decision support powered by local 70B LLM + Multi-LLM Chain + Bayesian reasoning**
+**Cloud-Hybrid clinical decision support: Grok orchestrates multiple AI vendors (xAI, Azure, Anthropic, Google, Local) for consensus-based medical recommendations**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+⚠️ **INVESTIGATIONAL DEVICE - NOT FDA-CLEARED**
+
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-2.0-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-6.5-blue)](CHANGELOG.md)
 
 ---
 
 ## 🌟 Key Features
 
-### v3.0 (Current - Beta)
-- **🤖 CrewAI Agent Swarm**: Autonomous multi-agent orchestration (Pharmacologist, Risk Analyst, Literature, Arbiter).
-- **📱 Mobile Co-Pilot PWA**: "Add to Home Screen" capable mobile app with voice-to-SOAP.
-- **🖼️ Medical Imaging AI**: Integrated MONAI/CheXNet for X-ray/CT analysis.
-- **⚡ Zero-Cloud Architecture**: All inference runs locally (vLLM + Whisper).
+### v6.5 Enterprise (Current)
+- **📊 HCC Gap Analysis Reports**: CSV/PDF reporting for revenue cycle management.
+- **💡 AI-Powered M.E.A.T. Suggestions**: Automated documentation improvement hints.
+- **🔢 Batch RAF Scoring**: Population health analytics for 100+ patients.
 
-### v2.0 (Stable)
+### v6.0 (Advanced Analytics)
+- **🔮 Predictive Analytics**: Sepsis (qSOFA) and Readmission (LACE) risk scoring.
+- **🔬 Clinical Trials**: Automated eligibility matching.
+- **⚖️ AI Governance**: Bias detection and fairness auditing.
+
+### v5.0 (Specialty & RCM)
+- **❤️ Specialty Modules**: Cardiology (ASCVD, CHA2DS2-VASc) and Behavioral Health (PHQ-9).
+- **💰 RCM Engine**: Claims denial prediction.
+- **social SDOH Screening**: Social determinants of health analysis.
+
+### v4.0 (Safety & Security)
+- **💊 Drug-Drug Interaction**: Real-time safety checks.
+- **🔒 PHI Masking**: Automated redaction for demo/training.
+
+### v3.0 (Integration)
+- **🤖 CrewAI Agent Swarm**: Autonomous multi-agent orchestration.
+- **📱 Mobile Co-Pilot**: Voice-to-SOAP PWA.
+- **🏥 HL7 v2 Messaging**: ADT/ORU integration.
+
+### v2.0 (Core)
 - **🔗 Multi-LLM Chain**: 4-stage reasoning pipeline (Kinetics → Adversarial → Literature → Arbiter).
-- **🔒 HIPAA Compliance**: On-premises execution, audit trails, network isolation.
-- **🏥 EHR Integration**: FHIR-ready data structure.
-- **Cryptographic integrity verification** with blockchain-style hash chaining
-
-### Dual-Mode Operation
-- **⚡ Fast Mode (v1.0)**: Single LLM call with Bayesian analysis (~2s)
-- **🔗 Chain Mode (v2.0)**: 4-stage multi-LLM chain for complex cases (~8s)
-- **Easy toggle** in UI - choose the right tool for each scenario
-
-### Enhanced Audit Trail
-- Tracks analysis mode (Fast vs Chain) for regulatory compliance
-- Full chain reasoning provenance for critical decisions
-- Immutable blockchain-style logging with cryptographic verification
+- **⚡ Fast Mode**: Sub-3 second inference for routine cases.
+- **🔒 HIPAA Compliance**: On-premises execution, immutable audit trails.
 
 ---
 
 ## 🎯 What Is This?
 
-Grok Doc is a **fully on-premises clinical AI system** designed for hospitals that require:
+Grok Doc is a **Cloud-Hybrid clinical decision support system** designed for hospitals that require:
 
-- ✅ **Zero cloud dependency** - All inference happens locally
-- ✅ **HIPAA compliance** - PHI never leaves the hospital network
-- ✅ **Hospital WiFi lock** - Only runs on authorized networks
-- ✅ **Multi-LLM chain reasoning** - Adversarial validation for critical decisions
-- ✅ **Immutable audit trail** - Blockchain-style tamper-evident logging
-- ✅ **Bayesian reasoning** - Probabilistic safety assessment over 17k+ cases
-- ✅ **Sub-3 second inference** (Fast mode) - Real-time clinical decision support
+- ✅ **Cloud-Hybrid Architecture** - Grok orchestrates top-tier AI models (xAI, Azure, Anthropic)
+- ✅ **HIPAA Compliance** - PHI masked before cloud transmission
+- ✅ **Network Awareness** - Basic hospital network verification
+- ✅ **Multi-LLM Chain Reasoning** - Adversarial validation for critical decisions
+- ✅ **Immutable Audit Trail** - Blockchain-style tamper-evident logging
+- ✅ **Sub-3 Second Inference** (Fast Mode) - Real-time clinical decision support
 
 **Use cases:**
 - Antibiotic dosing safety checks
@@ -55,7 +62,7 @@ Grok Doc is a **fully on-premises clinical AI system** designed for hospitals th
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Architecture (Cloud-Hybrid)
 
 ### Fast Mode (v1.0)
 ```
@@ -63,7 +70,7 @@ Grok Doc is a **fully on-premises clinical AI system** designed for hospitals th
 │  Doctor's Phone │
 │   (Streamlit)   │
 └────────┬────────┘
-         │ Hospital WiFi Only
+         │ Secure HTTPS (TLS 1.3)
          ▼
 ┌─────────────────────────────────────┐
 │         Grok Doc Server             │
@@ -72,54 +79,22 @@ Grok Doc is a **fully on-premises clinical AI system** designed for hospitals th
 │  │     → Retrieve 100 cases     │   │
 │  └──────────────────────────────┘   │
 │  ┌──────────────────────────────┐   │
-│  │  2. Bayesian Analysis        │   │
-│  │     → Safety probability     │   │
-│  └──────────────────────────────┘   │
+│  │  2. PHI Masking Engine       │   │
+│  │     → Redact Names/MRNs      │   │
+│  └──────────────┬───────────────┘   │
+│                 │ xAI API (JSON)    │
+│                 ▼                   │
 │  ┌──────────────────────────────┐   │
-│  │  3. LLM Reasoning (70B)      │   │
-│  │     → Clinical recommendation│   │
-│  └──────────────────────────────┘   │
+│  │  3. xAI Cloud (Grok-Beta)    │   │
+│  │     → Clinical reasoning     │   │
+│  └──────────────┬───────────────┘   │
+│                 │ Response          │
+│                 ▼                   │
 │  ┌──────────────────────────────┐   │
 │  │  4. Physician Sign-Off       │   │
 │  │     → Immutable audit log    │   │
 │  └──────────────────────────────┘   │
 └─────────────────────────────────────┘
-```
-
-### Chain Mode (v2.0) - NEW
-```
-┌─────────────────────────────────────────────────────────┐
-│              Multi-LLM Reasoning Chain                  │
-│                                                         │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │  LLM #1: Kinetics Model                          │  │
-│  │  "Clinical pharmacologist"                       │  │
-│  │  → PK/PD calculations, dose recommendations     │  │
-│  └────────────────┬─────────────────────────────────┘  │
-│                   │ (Cryptographic hash chain)        │
-│                   ▼                                    │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │  LLM #2: Adversarial Model                       │  │
-│  │  "Paranoid risk analyst"                         │  │
-│  │  → Drug interactions, edge cases, risks         │  │
-│  └────────────────┬─────────────────────────────────┘  │
-│                   │ (Hash chaining continues)          │
-│                   ▼                                    │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │  LLM #3: Literature Model                        │  │
-│  │  "Clinical researcher"                           │  │
-│  │  → Evidence from recent studies, alternatives   │  │
-│  └────────────────┬─────────────────────────────────┘  │
-│                   │ (Hash verification)                │
-│                   ▼                                    │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │  LLM #4: Arbiter Model                           │  │
-│  │  "Attending physician"                           │  │
-│  │  → Final recommendation with confidence score   │  │
-│  └──────────────────────────────────────────────────┘  │
-│                                                         │
-│  All steps verified via cryptographic hash chain       │
-└─────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -128,9 +103,9 @@ Grok Doc is a **fully on-premises clinical AI system** designed for hospitals th
 
 ### Prerequisites
 
-- **Hardware:** DGX Spark, DGX Station, or 128GB+ VRAM GPU server
-- **Software:** Python 3.9+, CUDA 12.1+
-- **Network:** Hospital WiFi with controlled access
+- **Hardware:** Standard Server or Laptop (No GPU required)
+- **Software:** Python 3.10+
+- **API Key:** xAI API Key (`XAI_API_KEY`)
 
 ### Installation
 
@@ -139,17 +114,17 @@ Grok Doc is a **fully on-premises clinical AI system** designed for hospitals th
 git clone https://github.com/bufirstrepo/Grok_doc_enteprise.git
 cd Grok_doc_enteprise
 
+# Create and activate virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
 # Install dependencies
 pip install -r requirements.txt
 
-# Download model (one-time, ~140GB)
-huggingface-cli download meta-llama/Meta-Llama-3.1-70B-Instruct-AWQ \
-  --local-dir /models/llama-3.1-70b-instruct-awq
+# Set API Key
+export XAI_API_KEY="your-key-here"
 
-# Set model path
-export GROK_MODEL_PATH="/models/llama-3.1-70b-instruct-awq"
-
-# Build sample case database (for testing)
+# Build sample case database
 python data_builder.py
 
 # Run application
@@ -176,24 +151,34 @@ streamlit run app.py --server.port 8501
 
 ```
 Grok_doc_enteprise/
-├── app.py                    # Main Streamlit UI (v2.0 with mode toggle)
-├── llm_chain.py              # Multi-LLM chain orchestrator (NEW)
+├── app.py                    # Main Streamlit UI (v6.5 Enterprise)
+├── hcc_scoring.py            # HCC/RAF Scoring Engine (v2.5/v6.5)
+├── meat_compliance.py        # M.E.A.T. Validator (v2.5/v6.5)
+├── advanced_analytics.py     # Sepsis/Readmission (v6.0)
+├── research_module.py        # Clinical Trials (v6.0)
+├── ai_governance.py          # Bias Detection (v6.0)
+├── llm_chain.py              # Multi-LLM chain orchestrator
 ├── local_inference.py        # LLM inference engine (vLLM)
-├── bayesian_engine.py        # Bayesian safety analysis
-├── audit_log.py              # Immutable blockchain-style logging (v2.0 updated)
-├── data_builder.py           # Case database generator
+├── audit_log.py              # Immutable blockchain-style logging
 ├── requirements.txt          # Python dependencies
-├── LICENSE                   # MIT with clinical restriction
 ├── README.md                 # This file
+├── DEPLOYMENT.md             # Deployment guide
 ├── CHANGELOG.md              # Version history
-├── CLAUDE.md                 # AI assistant documentation
-├── MULTI_LLM_CHAIN.md        # Chain architecture details (NEW)
-├── QUICK_START_V2.md         # Quick reference guide (NEW)
+├── CONTRIBUTING.md           # Contribution guidelines
 │
-├── case_index.faiss          # Vector database (generated)
-├── cases_17k.jsonl           # Clinical cases (generated)
-├── audit.db                  # SQLite audit log (generated)
-└── audit_chain.jsonl         # Human-readable log backup (generated)
+├── /docs/
+│   ├── /technical/           # Deep dives (Architecture, Prompts)
+│   └── /archive/             # Historical reports
+│
+├── /tests/
+│   ├── test_enterprise_features.py  # Main test suite
+│   ├── test_integration.py          # Integration tests
+│   └── /quality/                    # Code quality tests
+│
+└── [Generated Data]
+    ├── case_index.faiss
+    ├── cases_17k.jsonl
+    └── audit.db
 ```
 
 ---
@@ -488,10 +473,11 @@ For security issues, please see [SECURITY.md](SECURITY.md) for our responsible d
 
 ## 📚 Documentation
 
+- [DEPLOYMENT.md](DEPLOYMENT.md) - Deployment & Mobile Guide
 - [CHANGELOG.md](CHANGELOG.md) - Version history
-- [MULTI_LLM_CHAIN.md](MULTI_LLM_CHAIN.md) - Technical architecture of the multi-LLM chain
-- [QUICK_START_V2.md](QUICK_START_V2.md) - Quick reference guide
-- [CLAUDE.md](CLAUDE.md) - AI assistant development guide
+- [docs/technical/multi_llm_chain.md](docs/technical/multi_llm_chain.md) - Chain architecture
+- [docs/technical/prompt_comparison.md](docs/technical/prompt_comparison.md) - Prompt engineering
+- [CONTRIBUTING.md](CONTRIBUTING.md) - Development guide
 
 ---
 
@@ -500,4 +486,4 @@ For security issues, please see [SECURITY.md](SECURITY.md) for our responsible d
 ![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)
 ![License](https://img.shields.io/badge/License-MIT%20with%20restrictions-yellow.svg)
 ![On-Prem](https://img.shields.io/badge/100%25-On--Prem-brightgreen)
-![v2.0](https://img.shields.io/badge/version-2.0-blue)
+![v6.5](https://img.shields.io/badge/version-6.5-blue)
