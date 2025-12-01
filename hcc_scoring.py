@@ -5,6 +5,11 @@ Calculates Risk Adjustment Factor (RAF) scores based on CMS-HCC model (v28).
 
 from typing import List, Dict, Tuple
 
+# Default values for batch processing when patient data is incomplete
+DEFAULT_AGE = 65  # Medicare eligibility age
+DEFAULT_GENDER = 'M'  # Default to male for calculation purposes
+
+
 class HCCEngine:
     """
     CMS-HCC Risk Adjustment Engine
@@ -201,6 +206,31 @@ class HCCEngine:
             'details': details,
             'hcc_count': len(final_hccs)
         }
+
+    def batch_calculate(self, patients: List[Dict]) -> List[Dict]:
+        """
+        Calculate RAF scores for multiple patients in batch.
+        
+        Args:
+            patients: List of patient dicts with keys:
+                     - 'mrn': Medical Record Number
+                     - 'age': Patient age
+                     - 'gender': 'M' or 'F'
+                     - 'icd_codes': List of ICD-10 codes
+                     
+        Returns:
+            List of RAF calculation results for each patient
+        """
+        results = []
+        for patient in patients:
+            result = self.calculate_raf(
+                patient.get('age', DEFAULT_AGE),
+                patient.get('gender', DEFAULT_GENDER),
+                patient.get('icd_codes', [])
+            )
+            result['mrn'] = patient.get('mrn', 'UNKNOWN')
+            results.append(result)
+        return results
 
     def _get_age_group(self, age: int) -> str:
         if age < 65: return '65-69' # Fallback for under 65 (disabled model not implemented)

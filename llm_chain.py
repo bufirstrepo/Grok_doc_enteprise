@@ -25,6 +25,9 @@ THREE_LINE_PATTERN = re.compile(
     r"Key [^:]+: (.+?)(?=\n\n|\Z)", re.DOTALL
 )
 
+# Placeholder for step_hash before computation (will be replaced with actual hash)
+PENDING_HASH = ""
+
 # 4. BLAKE3 hashing (using BLAKE2b as standard lib fallback)
 def blake3_hash(text: str) -> str:
     return hashlib.blake2b(text.encode()).hexdigest()
@@ -45,7 +48,7 @@ def parse_structured(response: str) -> Dict[str, Any]:
         "key_uncertainty": match.group(3).strip()
     }
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, UTC
 import hashlib
 import json
 import random
@@ -183,7 +186,7 @@ class MultiLLMChain:
                 model_name=config.get("kinetics")
             )
         except Exception as e:
-            errors.append({"stage": "kinetics", "error": str(e), "timestamp": datetime.utcnow().isoformat()})
+            errors.append({"stage": "kinetics", "error": str(e), "timestamp": datetime.now(UTC).isoformat()})
             return self._generate_error_response("kinetics", errors)
         
         try:
@@ -192,7 +195,7 @@ class MultiLLMChain:
                 model_name=config.get("adversarial")
             )
         except Exception as e:
-            errors.append({"stage": "adversarial", "error": str(e), "timestamp": datetime.utcnow().isoformat()})
+            errors.append({"stage": "adversarial", "error": str(e), "timestamp": datetime.now(UTC).isoformat()})
             # Can continue with degraded mode - adversarial is important but not critical
             adversarial_result = self._create_fallback_step("Blue Team (Coding Verification)", 
                 "WARNING: Blue Team validation unavailable - proceeding with heightened caution")
@@ -203,7 +206,7 @@ class MultiLLMChain:
                 model_name=config.get("red_team")
             )
         except Exception as e:
-            errors.append({"stage": "red_team", "error": str(e), "timestamp": datetime.utcnow().isoformat()})
+            errors.append({"stage": "red_team", "error": str(e), "timestamp": datetime.now(UTC).isoformat()})
             red_team_result = self._create_fallback_step("Red Team (Safety Attack)",
                 "WARNING: Red Team safety attack unavailable - proceeding with heightened caution")
 
@@ -213,7 +216,7 @@ class MultiLLMChain:
                 model_name=config.get("literature")
             )
         except Exception as e:
-            errors.append({"stage": "literature", "error": str(e), "timestamp": datetime.utcnow().isoformat()})
+            errors.append({"stage": "literature", "error": str(e), "timestamp": datetime.now(UTC).isoformat()})
             literature_result = self._create_fallback_step("Literature Model",
                 "WARNING: Literature validation unavailable - relying on kinetics and adversarial only")
         
@@ -223,7 +226,7 @@ class MultiLLMChain:
                 model_name=config.get("arbiter")
             )
         except Exception as e:
-            errors.append({"stage": "arbiter", "error": str(e), "timestamp": datetime.utcnow().isoformat()})
+            errors.append({"stage": "arbiter", "error": str(e), "timestamp": datetime.now(UTC).isoformat()})
             return self._generate_error_response("arbiter", errors, partial_chain=self.chain_history)
         
         return {
@@ -264,16 +267,17 @@ class MultiLLMChain:
 
     def _create_fallback_step(self, step_name: str, warning_msg: str) -> ChainStep:
         """Create fallback step when non-critical stage fails"""
+        timestamp = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+        prev_hash = self._get_last_hash()
         step = ChainStep(
-            step_name, 
-            "FALLBACK_MODE", 
-            warning_msg,
-            datetime.utcnow().isoformat() + "Z",
-            self._get_last_hash(),
-            self._get_last_hash(),
-            "", # step_hash placeholder
-            0.5,  # Reduced confidence for fallback
-            "FALLBACK"
+            step_name=step_name, 
+            prompt="FALLBACK_MODE", 
+            response=warning_msg,
+            timestamp=timestamp,
+            prev_hash=prev_hash,
+            step_hash=PENDING_HASH,  # Placeholder - will be computed after creation
+            confidence=0.5,  # Reduced confidence for fallback
+            model_name="FALLBACK"
         )
         step.step_hash = self._compute_step_hash(step.step_name, step.prompt, step.response, step.prev_hash, step.timestamp)
         self.chain_history.append(step)
@@ -314,9 +318,9 @@ SHOW YOUR WORK: List every parameter used (e.g., 'Creatinine: 1.2 mg/dL from Lab
             step_name="Kinetics Model",
             prompt=prompt,
             response=response_text,
-            timestamp=datetime.utcnow().isoformat() + "Z",
+            timestamp=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             prev_hash=self._get_last_hash(),
-            step_hash="",
+            step_hash=PENDING_HASH,  # Computed after creation
             confidence=bayesian['prob_safe'],
             model_name=model_name,
             execution_time_ms=dt,
@@ -384,9 +388,9 @@ OUTPUT: Provide a concise 4-sentence report:
             step_name="Blue Team (Coding Verification)",
             prompt=prompt,
             response=response_text,
-            timestamp=datetime.utcnow().isoformat() + "Z",
+            timestamp=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             prev_hash=self._get_last_hash(),
-            step_hash="",
+            step_hash=PENDING_HASH,  # Computed after creation
             confidence=coding_confidence,
             model_name=model_name,
             execution_time_ms=execution_time,
@@ -451,9 +455,9 @@ FINAL SAFETY SCORE: [0.0-1.0]"""
             step_name="Red Team (Safety Attack)",
             prompt=prompt,
             response=response_text,
-            timestamp=datetime.utcnow().isoformat() + "Z",
+            timestamp=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             prev_hash=self._get_last_hash(),
-            step_hash="",
+            step_hash=PENDING_HASH,  # Computed after creation
             confidence=safety_score,
             model_name=model_name,
             execution_time_ms=execution_time,
@@ -511,9 +515,9 @@ EVIDENCE STRENGTH: [0.0-1.0]"""
             step_name="Literature Model",
             prompt=prompt,
             response=response_text,
-            timestamp=datetime.utcnow().isoformat() + "Z",
+            timestamp=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             prev_hash=self._get_last_hash(),
-            step_hash="",
+            step_hash=PENDING_HASH,  # Computed after creation
             confidence=evidence_strength,
             model_name=model_name,
             execution_time_ms=execution_time,
@@ -613,11 +617,14 @@ INSTRUCTION: Return ONLY a single valid JSON object with this exact structure. N
             confidence_breakdown["reason"] = f"Data Sufficiency too low ({data_sufficiency})"
 
         step = ChainStep(
-            "Arbiter Model", prompt, response,
-            datetime.utcnow().isoformat() + "Z",
-            self._get_last_hash(), "",
-            final_confidence,
-            model_name,
+            step_name="Arbiter Model",
+            prompt=prompt,
+            response=response,
+            timestamp=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+            prev_hash=self._get_last_hash(),
+            step_hash=PENDING_HASH,  # Computed after creation
+            confidence=final_confidence,
+            model_name=model_name,
             execution_time_ms=execution_time,
             tokens_used=None,
             data_sufficiency=data_sufficiency,
