@@ -18,8 +18,8 @@ set -e  # Exit on error
 
 # ── CONFIGURATION ─────────────────────────────────────────────────
 PYTHON_MIN_VERSION="3.9"
-MODEL_PATH="${GROK_MODEL_PATH:-/models/llama-3.1-70b-instruct-awq}"
-MODEL_HF_REPO="meta-llama/Meta-Llama-3.1-70B-Instruct-AWQ"
+MODEL_PATH="${GROK_MODEL_PATH:-/models/grok-beta}"
+
 
 # ── COLOR OUTPUT ───────────────────────────────────────────────────
 GREEN='\033[0;32m'
@@ -108,10 +108,7 @@ if command -v nvidia-smi &> /dev/null; then
     TOTAL_VRAM=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | awk '{sum+=$1} END {print sum/1024}')
     info "✓ Found $GPU_COUNT GPU(s) with ${TOTAL_VRAM}GB total VRAM"
 
-    if (( $(echo "$TOTAL_VRAM < 80" | bc -l) )); then
-        warn "Recommended: 80GB+ VRAM for Llama-3.1-70B"
-        warn "Consider using Llama-3.1-8B for your hardware"
-    fi
+
 else
     warn "nvidia-smi not found. GPU inference may not be available."
 fi
@@ -134,57 +131,9 @@ pip install -r requirements.txt --quiet
 
 info "✓ Dependencies installed"
 
-# ── STEP 3: DOWNLOAD MODEL ────────────────────────────────────────
-step "Step 3/5: LLM Model Setup"
+# Model download skipped (Grok-beta uses API)
+info "Using Grok-beta API (no local model download required)"
 
-if [ "$SKIP_MODEL" = true ]; then
-    warn "Skipping model download (--skip-model flag)"
-    warn "Set GROK_MODEL_PATH to your model location before running"
-elif [ -d "$MODEL_PATH" ]; then
-    info "✓ Model already exists at $MODEL_PATH"
-else
-    echo ""
-    echo "┌────────────────────────────────────────────────────────┐"
-    echo "│  Model Download                                        │"
-    echo "│                                                        │"
-    echo "│  Model: $MODEL_HF_REPO                                │"
-    echo "│  Size: ~140GB                                          │"
-    echo "│  Path: $MODEL_PATH                                    │"
-    echo "│                                                        │"
-    echo "│  This will take 15-60 minutes depending on your       │"
-    echo "│  internet connection.                                 │"
-    echo "└────────────────────────────────────────────────────────┘"
-    echo ""
-
-    read -p "Download model now? (y/N): " -n 1 -r
-    echo
-
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        info "Downloading model to $MODEL_PATH..."
-
-        # Check if huggingface-cli is installed
-        if ! command -v huggingface-cli &> /dev/null; then
-            info "Installing huggingface-hub..."
-            pip install huggingface-hub[cli] --quiet
-        fi
-
-        # Download model
-        huggingface-cli download "$MODEL_HF_REPO" \
-            --local-dir "$MODEL_PATH" \
-            --local-dir-use-symlinks False
-
-        info "✓ Model downloaded successfully"
-
-        # Verify model files
-        if [ -f "$MODEL_PATH/config.json" ]; then
-            info "✓ Model verified (config.json found)"
-        else
-            warn "Model download may be incomplete (config.json not found)"
-        fi
-    else
-        warn "Skipping model download. Remember to set GROK_MODEL_PATH before running."
-    fi
-fi
 
 # ── STEP 4: GENERATE CASE DATABASE ────────────────────────────────
 step "Step 4/5: Generating sample case database"

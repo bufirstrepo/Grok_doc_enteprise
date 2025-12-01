@@ -37,7 +37,7 @@ except ImportError:
 
 # Solidity Smart Contract (compile this for production)
 AUDIT_CONTRACT_SOURCE = """
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Custom-Restrictions
 pragma solidity ^0.8.0;
 
 contract GrokDocAudit {

@@ -15,6 +15,9 @@
 - **📊 HCC Gap Analysis Reports**: CSV/PDF reporting for revenue cycle management.
 - **💡 AI-Powered M.E.A.T. Suggestions**: Automated documentation improvement hints.
 - **🔢 Batch RAF Scoring**: Population health analytics for 100+ patients.
+- **🕸️ Doctor-Patient Graph Index**: FAISS-powered overlap analysis for referral optimization.
+- **🖥️ Role-Specific Dashboards**: Tailored views for Doctors, Admins, and Researchers.
+- **⚡ Instant Consult Prediction**: Login banner predicting next likely patient consult.
 
 ### v6.0 (Advanced Analytics)
 - **🔮 Predictive Analytics**: Sepsis (qSOFA) and Readmission (LACE) risk scoring.
@@ -223,17 +226,14 @@ Grok_doc_enteprise/
 ## 📊 Performance Benchmarks
 
 ### Fast Mode (v1.0)
-| Hardware | Model | Inference Time | Cost |
-|----------|-------|----------------|------|
-| DGX Spark (8× H100) | Llama-3.1-70B-AWQ | 2.1s | $65k |
-| 4× A100 (80GB) | Llama-3.1-70B-AWQ | 3.8s | $40k |
-| 2× A100 (80GB) | Llama-3.1-70B-AWQ | 6.2s | $20k |
+| Model | Inference Time | Cost |
+|-------|----------------|------|
+| Grok-beta (API) | ~1.5s | Usage-based |
 
 ### Chain Mode (v2.0)
-| Hardware | Model | Inference Time | Cost |
-|----------|-------|----------------|------|
-| DGX Spark (8× H100) | Llama-3.1-70B-AWQ | 7.8s (4× LLM calls) | $65k |
-| 4× A100 (80GB) | Llama-3.1-70B-AWQ | 14.2s (4× LLM calls) | $40k |
+| Model | Inference Time | Cost |
+|-------|----------------|------|
+| Grok-beta (API) | ~6.0s (4× LLM calls) | Usage-based |
 
 *All benchmarks: 17k case retrieval + Bayesian + LLM (500 tokens per call)*
 
@@ -287,25 +287,11 @@ export_audit_trail("audit_export_2025.json")
 
 ## 🏥 Production Deployment
 
-### Step 1: Hardware Setup
+### Step 1: API Configuration
 
 ```bash
-# Verify GPU availability
-nvidia-smi
-
-# Should show 8× H100 (or equivalent) with 640GB+ total VRAM
-```
-
-### Step 2: Model Download
-
-```bash
-# Download quantized model locally (AWQ recommended)
-huggingface-cli download meta-llama/Meta-Llama-3.1-70B-Instruct-AWQ \
-  --local-dir /opt/models/llama-70b
-
-# Verify model files
-ls -lh /opt/models/llama-70b/
-# Should see: config.json, model-*.safetensors, tokenizer files
+# Ensure XAI_API_KEY is set in your environment
+export XAI_API_KEY="your-production-key"
 ```
 
 ### Step 3: Build Real Case Database
@@ -398,7 +384,7 @@ if not chain.verify_chain():
 
 ## 📜 License
 
-**MIT License with Clinical/Commercial Use Restriction**
+**Custom License with Clinical/Commercial Use Restrictions**
 
 Free for:
 - Academic research
@@ -450,8 +436,7 @@ For security issues, please see [SECURITY.md](SECURITY.md) for our responsible d
 
 ## 🌟 Acknowledgments
 
-- Built with [vLLM](https://github.com/vllm-project/vllm) for fast inference
-- Powered by [Meta Llama 3.1](https://llama.meta.com/)
+- Powered by [xAI Grok-beta](https://x.ai/)
 - Bayesian engine uses [PyMC](https://www.pymc.io/)
 - Vector search via [FAISS](https://github.com/facebookresearch/faiss)
 - UI built with [Streamlit](https://streamlit.io/)
@@ -484,6 +469,6 @@ For security issues, please see [SECURITY.md](SECURITY.md) for our responsible d
 **Made with ❤️ for safer hospital care**
 
 ![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)
-![License](https://img.shields.io/badge/License-MIT%20with%20restrictions-yellow.svg)
+![License](https://img.shields.io/badge/License-Custom%20Restrictions-yellow.svg)
 ![On-Prem](https://img.shields.io/badge/100%25-On--Prem-brightgreen)
 ![v6.5](https://img.shields.io/badge/version-6.5-blue)

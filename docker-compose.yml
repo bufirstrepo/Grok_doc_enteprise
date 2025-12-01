@@ -16,9 +16,9 @@ services:
       - "8501:8501"
     environment:
       - REQUIRE_WIFI_CHECK=false  # Disable in Docker
-      - GROK_MODEL_PATH=/models/llama-3.1-70b-instruct-awq
+      - GROK_MODEL_PATH=/models/grok-beta
     depends_on:
-      - vllm-server
+
       - neo4j
       - ganache
     networks:
@@ -38,7 +38,7 @@ services:
       - REQUIRE_WIFI_CHECK=false
     depends_on:
       - websocket-server
-      - vllm-server
+
     networks:
       - grokdoc-network
     restart: unless-stopped
@@ -58,33 +58,7 @@ services:
       - grokdoc-network
     restart: unless-stopped
 
-  # ============================================================================
-  # LLM INFERENCE SERVER (vLLM)
-  # ============================================================================
 
-  vllm-server:
-    image: vllm/vllm-openai:latest
-    container_name: grokdoc-vllm
-    command: >
-      --model /models/llama-3.1-70b-instruct-awq
-      --quantization awq
-      --dtype auto
-      --gpu-memory-utilization 0.9
-      --max-model-len 4096
-    volumes:
-      - /path/to/models:/models  # Update this path
-    ports:
-      - "8000:8000"
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    networks:
-      - grokdoc-network
-    restart: unless-stopped
 
   # ============================================================================
   # KNOWLEDGE GRAPH (Neo4j)

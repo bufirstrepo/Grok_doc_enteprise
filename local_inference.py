@@ -49,6 +49,18 @@ def get_llm(model_name: Optional[str] = None) -> Dict:
         tool_config = config.ai_tools[model]
         backend_type = tool_config.backend
 
+def init_inference_engine():
+    """
+    Fail-fast initialization to verify model configuration at startup.
+    """
+    try:
+        get_llm()
+        print(f"✓ Inference Engine Initialized (Model: {CURRENT_MODEL})")
+    except Exception as e:
+        print(f"❌ Inference Engine Failed: {e}")
+        sys.exit(1)
+
+
     # ── xAI API Backend ──
     if backend_type == "xai_api":
         from grok_client import get_grok_client
@@ -73,14 +85,7 @@ def get_llm(model_name: Optional[str] = None) -> Dict:
         client = get_google_client()
         return {"type": "google", "name": model, "engine": client}
 
-    # ── vLLM Backend (Local/On-Prem) ──
-    elif backend_type == "vllm":
-        try:
-            from vllm_engine import get_vllm_engine
-            engine = get_vllm_engine(model)
-            return {"type": "vllm", "name": model, "engine": engine}
-        except ImportError:
-            raise RuntimeError("vLLM backend not installed.")
+
 
     # ── Perplexity Backend ──
     elif backend_type == "perplexity":
@@ -97,7 +102,7 @@ def get_llm(model_name: Optional[str] = None) -> Dict:
 def grok_query(
     prompt: str,
     temperature: float = 0.0,
-    max_tokens: int = 2048,
+    max_tokens: Optional[int] = None,
     model_name: Optional[str] = None,
     system_prompt: Optional[str] = None,
     stream: bool = False,
@@ -107,6 +112,21 @@ def grok_query(
     """
     # Get LLM engine
     llm = get_llm(model_name)
+    
+    # Use config max_tokens if not provided
+    if max_tokens is None:
+        # Try to get from config via get_config()
+        try:
+            config = get_config()
+            model = model_name or CURRENT_MODEL
+            if model in config.ai_tools:
+                max_tokens = config.ai_tools[model].max_tokens
+        except Exception:
+            pass
+            
+    # Fallback default
+    if max_tokens is None:
+        max_tokens = 2048
 
     try:
         # ── Route to appropriate backend ──
@@ -156,17 +176,7 @@ def grok_query(
                 system_prompt=system_prompt
             )
 
-        # ── Local vLLM ──
-        elif llm["type"] == "vllm":
-            from vllm_engine import query_vllm
-            full_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
-            return query_vllm(
-                llm["engine"],
-                full_prompt,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                stream=stream
-            )
+
 
         # ── Perplexity ──
         elif llm["type"] == "perplexity":

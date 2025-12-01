@@ -267,7 +267,7 @@ Brief description of changes
 
 ## 📜 License
 
-By contributing, you agree that your contributions will be licensed under the same MIT license with clinical use restrictions. See [LICENSE](LICENSE) for details.
+By contributing, you agree that your contributions will be licensed under the same custom license with clinical use restrictions. See [LICENSE](LICENSE) for details.
 
 **Commercial/Clinical Use:** Requires written authorization even for contributors.
 

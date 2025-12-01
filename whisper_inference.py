@@ -10,13 +10,9 @@ from typing import Optional
 import tempfile
 import subprocess
 
-# Try vLLM first (if available), fallback to faster-whisper
-try:
-    from vllm import LLM, SamplingParams
-    VLLM_AVAILABLE = True
-except ImportError:
-    VLLM_AVAILABLE = False
-    print("⚠️ vLLM not available, using faster-whisper fallback")
+# vLLM support removed in favor of faster-whisper
+VLLM_AVAILABLE = False
+
 
 try:
     from faster_whisper import WhisperModel
@@ -54,17 +50,9 @@ class WhisperTranscriber:
                 compute_type="float16" if device == "cuda" else "int8"
             )
             self.backend = "faster-whisper"
-        elif VLLM_AVAILABLE:
-            print(f"🎤 Loading Whisper {model_size} with vLLM...")
-            # vLLM Whisper support (experimental in 0.6.1)
-            self.model = LLM(
-                model=f"openai/whisper-{model_size}",
-                trust_remote_code=True
-            )
-            self.backend = "vllm"
         else:
             raise ImportError(
-                "Neither faster-whisper nor vLLM available. "
+                "faster-whisper not available. "
                 "Install with: pip install faster-whisper"
             )
 
@@ -115,16 +103,7 @@ class WhisperTranscriber:
                 "duration": info.duration
             }
 
-        elif self.backend == "vllm":
-            # vLLM Whisper (experimental)
-            # Note: This may need adjustment based on vLLM version
-            result = self.model.generate([audio_path])
-            return {
-                "text": result[0].outputs[0].text,
-                "segments": [],
-                "language": language,
-                "duration": 0.0
-            }
+
 
     def transcribe_bytes(self, audio_bytes: bytes, language: str = "en") -> dict:
         """

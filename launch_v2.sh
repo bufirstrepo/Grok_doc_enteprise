@@ -18,7 +18,7 @@ set -e  # Exit on error
 
 # ── CONFIGURATION ─────────────────────────────────────────────────
 DEFAULT_PORT=8501
-MODEL_PATH="${GROK_MODEL_PATH:-/models/llama-3.1-70b-instruct-awq}"
+MODEL_PATH="${GROK_MODEL_PATH:-/models/grok-beta}"
 MIN_VRAM_GB=80
 CASE_INDEX="case_index.faiss"
 CASES_FILE="cases_17k.jsonl"
@@ -118,28 +118,11 @@ else
 
     info "✓ Found $GPU_COUNT GPU(s) with ${TOTAL_VRAM}GB total VRAM"
 
-    if (( $(echo "$TOTAL_VRAM < $MIN_VRAM_GB" | bc -l) )); then
-        warn "Recommended VRAM: ${MIN_VRAM_GB}GB+. You have: ${TOTAL_VRAM}GB."
-        warn "Consider using a smaller model (e.g., Llama-3.1-8B)"
-    fi
+
 fi
 
-# Check if model exists
-if [ ! -d "$MODEL_PATH" ]; then
-    warn "Model not found at $MODEL_PATH"
-    warn "Please download the model first:"
-    echo ""
-    echo "    huggingface-cli download meta-llama/Meta-Llama-3.1-70B-Instruct-AWQ \\"
-    echo "      --local-dir $MODEL_PATH"
-    echo ""
-    read -p "Continue anyway? (y/N): " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        exit 1
-    fi
-else
-    info "✓ Model found at $MODEL_PATH"
-fi
+# Model check skipped (Grok-beta uses API)
+
 
 # Check dependencies
 info "Checking Python dependencies..."

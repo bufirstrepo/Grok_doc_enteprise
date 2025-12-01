@@ -1,0 +1,133 @@
+{
+  "chain_id": "687b919af98d1ada94796208e5576fdb7774a712d57a0534b6670be06fda1e1a",
+  "genesis_hash": "GENESIS_CHAIN",
+  "steps": [
+    {
+      "step_name": "Scribe",
+      "prompt": "PATIENT: {'age': 72, 'gender': 'Male', 'labs': 'Cr: 1.8, WBC: 14.2'}\nQUESTION: Safe vancomycin dose for septic shock?\nTASK: Transcribe and structure the clinical context into a standardized format.",
+      "response": "{\"subjective\": [\"Patient is 72M\"], \"plan\": [\"Monitor\"]}",
+      "timestamp": "2025-12-01T21:07:45.979411Z",
+      "prev_hash": "GENESIS_CHAIN",
+      "step_hash": "2dc6b95dad678c200bad2c6aa684d0e93661b6d0ef30b8e37a32895a9587e190",
+      "confidence": 1.0,
+      "model_name": null,
+      "execution_time_ms": 0.05608499486697838,
+      "structured_data": {
+        "subjective": [
+          "Patient is 72M"
+        ],
+        "plan": [
+          "Monitor"
+        ]
+      },
+      "all_responses": [
+        [
+          "{\"subjective\": [\"Patient is 72M\"], \"plan\": [\"Monitor\"]}",
+          {
+            "subjective": [
+              "Patient is 72M"
+            ],
+            "plan": [
+              "Monitor"
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "step_name": "Kinetics Model",
+      "prompt": "PATIENT_CONTEXT: {\"subjective\": [\"Patient is 72M\"], \"plan\": [\"Monitor\"]}\nQUESTION: Safe vancomycin dose for septic shock?\nBAYESIAN: {'prob_safe': 0.85, 'n_cases': 150, 'ci_low': 0.78, 'ci_high': 0.91}\nEVIDENCE: - Case 1: Vancomycin in elderly male with AKI\n- Case 2: Septic shock management guidelines\nTASK: Pharmacokinetic calculation and dose recommendation.",
+      "response": "Calculated dose: 1000mg. Math: ...",
+      "timestamp": "2025-12-01T21:07:45.979478Z",
+      "prev_hash": "2dc6b95dad678c200bad2c6aa684d0e93661b6d0ef30b8e37a32895a9587e190",
+      "step_hash": "a38e8b770a64271ca9148d70c6279e5188c65cb660abf6daadf4d3901813f80f",
+      "confidence": 1.0,
+      "model_name": null,
+      "execution_time_ms": 0.026007997803390026,
+      "structured_data": {},
+      "all_responses": [
+        [
+          "Calculated dose: 1000mg. Math: ...",
+          {}
+        ]
+      ]
+    },
+    {
+      "step_name": "Adversarial Model",
+      "prompt": "PATIENT: {'age': 72, 'gender': 'Male', 'labs': 'Cr: 1.8, WBC: 14.2'}\nQUESTION: Safe vancomycin dose for septic shock?\nPROPOSED: Calculated dose: 1000mg. Math: ...\nTASK: Disassemble and verify coding/terminology.",
+      "response": "AUDIT_PASS",
+      "timestamp": "2025-12-01T21:07:45.979520Z",
+      "prev_hash": "a38e8b770a64271ca9148d70c6279e5188c65cb660abf6daadf4d3901813f80f",
+      "step_hash": "6182ebda2e18a44958d75570917b27301a2c7dd22bf8f6a36c3c76fb942f1e7a",
+      "confidence": 1.0,
+      "model_name": null,
+      "execution_time_ms": 0.019396000425331295,
+      "structured_data": {},
+      "all_responses": [
+        [
+          "AUDIT_PASS",
+          {}
+        ]
+      ]
+    },
+    {
+      "step_name": "Red Team",
+      "prompt": "PATIENT: {'age': 72, 'gender': 'Male', 'labs': 'Cr: 1.8, WBC: 14.2'}\nPROPOSED: Calculated dose: 1000mg. Math: ...\nVERIFICATION: AUDIT_PASS\nTASK: ATTACK. Find contraindications/risks.",
+      "response": "NO LETHAL FLAW",
+      "timestamp": "2025-12-01T21:07:45.979560Z",
+      "prev_hash": "6182ebda2e18a44958d75570917b27301a2c7dd22bf8f6a36c3c76fb942f1e7a",
+      "step_hash": "ee7ebb42765f2cc060c98f3cf0f77a0b9b04ac10a0bc9f9f7ba5fe51c46b79b8",
+      "confidence": 1.0,
+      "model_name": null,
+      "execution_time_ms": 0.019986997358500957,
+      "structured_data": {},
+      "all_responses": [
+        [
+          "NO LETHAL FLAW",
+          {}
+        ]
+      ]
+    },
+    {
+      "step_name": "Literature Model",
+      "prompt": "SCENARIO: Safe vancomycin dose for septic shock?\nPROPOSED: Calculated dose: 1000mg. Math: ...\nATTACK: NO LETHAL FLAW\nTASK: Evidence check (2023-2025).",
+      "response": "EVIDENCE_GRADE: A",
+      "timestamp": "2025-12-01T21:07:45.979600Z",
+      "prev_hash": "ee7ebb42765f2cc060c98f3cf0f77a0b9b04ac10a0bc9f9f7ba5fe51c46b79b8",
+      "step_hash": "28d802f16d6c6be8cb5d8af55a1c508a6c70ea31cb656d9ae530c87c8ab628f9",
+      "confidence": 1.0,
+      "model_name": null,
+      "execution_time_ms": 0.022621999960392714,
+      "structured_data": {},
+      "all_responses": [
+        [
+          "EVIDENCE_GRADE: A",
+          {}
+        ]
+      ]
+    },
+    {
+      "step_name": "Arbiter Tribunal",
+      "prompt": "PATIENT: {'age': 72, 'gender': 'Male', 'labs': 'Cr: 1.8, WBC: 14.2'}\nQUESTION: Safe vancomycin dose for septic shock?\nINPUTS:\nScribe: {\"subjective\": [\"Patient is 72M\"], \"plan\": [\"Monitor\"]}\nPharmacologist: Calculated dose: 1000mg. Math: ...\nBlue Team: AUDIT_PASS\nRed Team: NO LETHAL FLAW\nResearcher: EVIDENCE_GRADE: A",
+      "response": "Final Decision: APPROVED. Risks low.",
+      "timestamp": "2025-12-01T21:07:45.979644Z",
+      "prev_hash": "28d802f16d6c6be8cb5d8af55a1c508a6c70ea31cb656d9ae530c87c8ab628f9",
+      "step_hash": "687b919af98d1ada94796208e5576fdb7774a712d57a0534b6670be06fda1e1a",
+      "confidence": 1.0,
+      "model_name": null,
+      "execution_time_ms": 0.022562002413906157,
+      "structured_data": {
+        "final_decision": "APPROVED",
+        "arbiter_raw_response": "Final Decision: APPROVED. Risks low."
+      },
+      "all_responses": [
+        [
+          "Final Decision: APPROVED. Risks low.",
+          {}
+        ]
+      ]
+    }
+  ],
+  "verified": true,
+  "status": "COMPLETED"
+}

@@ -141,5 +141,5 @@ All notable changes to Grok Doc will be documented in this file.
 
 ### Documentation
 - Complete README with deployment guide
-- MIT license with clinical use restrictions
+- Custom license with clinical use restrictions
 - Setup automation script
