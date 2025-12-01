@@ -16,7 +16,17 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from urllib3.util.retry import Retry
 from src.config.hospital_config import get_config
-from local_inference import grok_query, list_available_models
+
+# CRITICAL: Fail-fast import of local_inference
+# This module MUST be available for the application to function
+try:
+    from local_inference import grok_query, list_available_models
+except ImportError as e:
+    import sys
+    print(f"[FATAL] local_inference.py could not be loaded: {e}", file=sys.stderr)
+    print("[FATAL] Application cannot start without local inference engine.", file=sys.stderr)
+    sys.exit(1)
+
 from audit_log import log_decision, verify_audit_integrity, log_security_violation
 from bayesian_engine import bayesian_safety_assessment
 from llm_chain import run_multi_llm_decision  # NEW in v2.0
@@ -127,7 +137,6 @@ st.set_page_config(
     page_title="Grok Doc Enterprise",
     page_icon="🩺",
     layout="wide",
-    initial_sidebar_state="expanded"
     initial_sidebar_state="expanded"
 )
 
