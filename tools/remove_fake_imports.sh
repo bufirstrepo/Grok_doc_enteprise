@@ -41,22 +41,20 @@ process_file() {
     
     # Check for fake imports
     for pattern in "${FAKE_PATTERNS[@]}"; do
-        if grep -q "$pattern" "$file"; then
+        if grep -qF "$pattern" "$file"; then
             echo "  Found fake import '$pattern' in $file"
-            # Remove lines containing the pattern
-            sed -i "/$pattern/d" "$file"
+            # Remove lines containing the pattern (using grep -v for safety)
+            grep -vF "$pattern" "$file" > "$file.tmp" && mv "$file.tmp" "$file"
             modified=true
         fi
     done
     
     # Check for header tokens (only strip lines that are comments or at start)
     for token in "${HEADER_TOKENS[@]}"; do
-        if grep -q "$token" "$file"; then
+        if grep -qF "$token" "$file"; then
             echo "  Found header token '$token' in $file"
             # Remove lines containing the token that appear to be headers/comments
-            sed -i "/^#.*$token/d" "$file"
-            sed -i "/^\"\"\".*$token/d" "$file"
-            sed -i "/^'''.*$token/d" "$file"
+            grep -v "^#.*$token" "$file" | grep -v "^\"\"\".*$token" | grep -v "^'''.*$token" > "$file.tmp" && mv "$file.tmp" "$file"
             modified=true
         fi
     done
