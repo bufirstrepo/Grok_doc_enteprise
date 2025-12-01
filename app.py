@@ -14,9 +14,8 @@ import time
 from typing import Tuple
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from urllib3.util.retry import Retry
 from src.config.hospital_config import get_config
-from local_inference import grok_query, list_available_models
+from local_inference import grok_query, list_available_models, init_inference_engine
 from audit_log import log_decision, verify_audit_integrity, log_security_violation
 from bayesian_engine import bayesian_safety_assessment
 from llm_chain import run_multi_llm_decision  # NEW in v2.0
@@ -45,7 +44,6 @@ except ImportError:
 # v4.0 Modules
 try:
     from clinical_safety import DrugInteractionChecker
-    from clinical_safety import DrugInteractionChecker
     from security_utils import PHIMasker, LDAPAuthenticator
     V40_AVAILABLE = True
 except ImportError:
@@ -68,6 +66,16 @@ try:
     V60_AVAILABLE = True
 except ImportError:
     V60_AVAILABLE = False
+
+
+# ── FAIL-FAST INITIALIZATION ────────────────────────────────────
+# Initialize local inference engine at startup for fail-fast behavior
+try:
+    init_inference_engine()
+except Exception as e:
+    import sys
+    print(f"FATAL: Failed to initialize inference engine: {e}")
+    sys.exit(1)
 
 
 # ── SEALED CONFIGURATION (Inject via env vars or Kubernetes secrets at deploy) ──
@@ -100,7 +108,6 @@ _SESSION.mount("http://", HTTPAdapter(max_retries=retry_strategy))
 _SESSION.mount("https://", HTTPAdapter(max_retries=retry_strategy))
 
 # ── MULTI-LAYER ZERO-TRUST ATTESTATION ──────────────────────────
-# ── MULTI-LAYER ZERO-TRUST ATTESTATION ──────────────────────────
 def is_on_hospital_wifi() -> Tuple[bool, str]:
     """
     Layer 1: Network SSID Verification
@@ -127,7 +134,6 @@ st.set_page_config(
     page_title="Grok Doc Enterprise",
     page_icon="🩺",
     layout="wide",
-    initial_sidebar_state="expanded"
     initial_sidebar_state="expanded"
 )
 
@@ -473,40 +479,6 @@ with st.sidebar:
                         st.success("No bias flags detected.")
             else:
                 st.warning("v6.0 Modules not loaded.")
-
-    # ── SPECIALTY & RCM TOOLS (v5.0) ─────────────────────────────────
-            with tabs[1]:
-                st.subheader("PHQ-9 Depression Screen")
-                # Mock inputs for demo
-                q1 = st.slider("Little interest/pleasure?", 0, 3, 0)
-                q2 = st.slider("Feeling down/depressed?", 0, 3, 0)
-                if st.button("Score PHQ-9"):
-                    scorer = BehavioralHealthScorer()
-                    # Assume 0 for others
-                    res = scorer.score_phq9([q1, q2, 0, 0, 0, 0, 0, 0, 0])
-                    st.metric("PHQ-9 Score", f"{res['score']} ({res['severity']})")
-
-            with tabs[2]:
-                st.subheader("Social Determinants (SDOH)")
-                sdoh_analyzer = SDOHAnalyzer()
-                findings = sdoh_analyzer.analyze(chief + " " + labs)
-                if findings:
-                    for cat, data in findings.items():
-                        st.error(f"⚠️ {cat} Need Identified")
-                        st.caption(f"Code: {data['code']} (Trigger: '{data['trigger']}')")
-                else:
-                    st.info("No SDOH needs identified in text.")
-
-            with tabs[3]:
-                st.subheader("Claims Denial Prediction")
-                rcm = DenialPredictor()
-                # Predict based on chief complaint + plan (mock plan)
-                pred = rcm.predict_denial(chief)
-                st.metric("Denial Probability", pred['probability'])
-                if pred['reasons']:
-                    st.warning(f"Risk Factors: {', '.join(pred['reasons'])}")
-        else:
-            st.warning("v5.0 Modules not loaded.")
 
     # ── HCC RISK ADJUSTMENT TOOLS (v2.5) ─────────────────────────────
     with st.expander("🏥 HCC Risk Adjustment Tools (v2.5)", expanded=False):

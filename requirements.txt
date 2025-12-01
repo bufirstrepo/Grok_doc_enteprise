@@ -1,17 +1,19 @@
 # Grok Doc v6.5 Enterprise - Cloud-Hybrid Requirements
-# Optimized for xAI API Integration
+# Optimized for xAI API Integration (Production Sanitized)
 
 # ============================================================================
 # Core Web Framework
 # ============================================================================
 streamlit==1.38.0              # Web interface framework
+flask>=3.0.0                   # API server framework
 
 # ============================================================================
 # AI API Clients (Multi-Vendor Support)
 # ============================================================================
 openai>=1.0.0                  # xAI Grok + Azure OpenAI
-anthropic>=0.18.0              # Anthropic Claude (optional)
-google-generativeai>=0.3.0     # Google Gemini/Med-PaLM (optional)
+anthropic>=0.18.0              # Anthropic Claude
+google-generativeai>=0.3.0     # Google Gemini/Med-PaLM
+vllm                           # Local LLM inference engine
 
 # ============================================================================
 # Data Processing
@@ -25,6 +27,7 @@ requests==2.32.5               # HTTP library
 # ============================================================================
 pyjwt==2.8.0                   # JWT authentication
 cryptography==43.0.1           # Encryption for audit logs
+sqlcipher3                     # Encrypted SQLite database
 
 # ============================================================================
 # Data Validation
