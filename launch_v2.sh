@@ -197,10 +197,10 @@ echo ""
 # Export model path for app
 export GROK_MODEL_PATH="$MODEL_PATH"
 
-# Launch Streamlit
+# Launch Streamlit - bind to localhost only for security (127.0.0.1)
 streamlit run app.py \
     --server.port=$PORT \
-    --server.address=0.0.0.0 \
+    --server.address=127.0.0.1 \
     --server.headless=true \
     --browser.serverAddress=localhost \
     --browser.gatherUsageStats=false
