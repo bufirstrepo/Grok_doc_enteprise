@@ -14,7 +14,6 @@ import time
 from typing import Tuple
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from urllib3.util.retry import Retry
 from src.config.hospital_config import get_config
 
 # CRITICAL: Fail-fast import of local_inference

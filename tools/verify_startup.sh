@@ -92,7 +92,7 @@ HALLUCINATED_IMPORTS="google.antigravity src.core.phase_arbiter src.agents.induc
 FOUND_HALLUCINATED_IMPORT=0
 
 for import_name in $HALLUCINATED_IMPORTS; do
-    if grep -r "$import_name" --include="*.py" . 2>/dev/null | grep -v "verify_startup.sh" | grep -q .; then
+    if grep -r "$import_name" --include="*.py" . 2>/dev/null | grep -q .; then
         fail "Found hallucinated import: $import_name"
         FOUND_HALLUCINATED_IMPORT=1
     fi
@@ -106,7 +106,7 @@ fi
 echo ""
 echo "6. Checking for simulation header tokens..."
 
-SIMULATION_TOKENS="!MAINTAIN_PERSISTENCE 2025_MODE SIMULATION_MODE"
+SIMULATION_TOKENS="!MAINTAIN_PERSISTENCE 2025_MODE SIMULATION_MODE TRIBUNAL"
 FOUND_TOKEN=0
 
 for token in $SIMULATION_TOKENS; do
