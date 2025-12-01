@@ -19,6 +19,7 @@ audit.db
 audit_chain.jsonl
 audit_security_violations.jsonl
 audit_export.json
+audit_unknown_*.json
 merkle_chain.txt
 
 # OS files

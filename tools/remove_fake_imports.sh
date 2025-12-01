@@ -21,16 +21,19 @@ echo "  - SIMULATION_MODE headers"
 echo ""
 
 # Patterns to remove (lines containing these will be deleted)
+# These patterns are designed to match only import statements and header tokens,
+# not legitimate code or comments
 PATTERNS=(
-    "google\.antigravity"
+    "^[[:space:]]*from google\.antigravity"
+    "^[[:space:]]*import google\.antigravity"
     "antigravity-sdk"
     "!MAINTAIN_PERSISTENCE"
     "2025_MODE"
     "SIMULATION_MODE"
-    "from src\.core\.phase_arbiter"
-    "from src\.agents\.induction_red_team"
-    "import phase_arbiter"
-    "import induction_red_team"
+    "^[[:space:]]*from src\.core\.phase_arbiter"
+    "^[[:space:]]*from src\.agents\.induction_red_team"
+    "^[[:space:]]*import phase_arbiter"
+    "^[[:space:]]*import induction_red_team"
 )
 
 # Find Python files

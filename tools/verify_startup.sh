@@ -82,9 +82,13 @@ while [ $WAITED -lt $TIMEOUT ]; do
         echo ""
         echo "✓ Server is listening on $HOST:$PORT"
         
-        # Quick health check via curl if available
+        # Quick health check via curl if available (try multiple endpoints)
         if command -v curl &> /dev/null; then
+            # Try Streamlit health endpoint first, fallback to root
             HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://$HOST:$PORT/_stcore/health" 2>/dev/null || echo "000")
+            if [ "$HTTP_CODE" = "000" ] || [ "$HTTP_CODE" = "404" ]; then
+                HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://$HOST:$PORT/" 2>/dev/null || echo "000")
+            fi
             echo "  HTTP health check: $HTTP_CODE"
         fi
         
