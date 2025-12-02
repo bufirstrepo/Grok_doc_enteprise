@@ -1,64 +1,26 @@
-# Grok Doc v6.5 Enterprise - Cloud-Hybrid Requirements
-# Optimized for xAI API Integration
+# Grok Doc v6.5 Enterprise - Hardened Dependencies
 
-# ============================================================================
-# Core Web Framework
-# ============================================================================
-streamlit==1.38.0              # Web interface framework
+# Core AI & Inference
+vllm==0.6.1
+torch==2.4.0
+sentence-transformers==3.0.0
+faiss-cpu==1.8.0
 
-# ============================================================================
-# AI API Clients (Multi-Vendor Support)
-# ============================================================================
-openai>=1.0.0                  # xAI Grok + Azure OpenAI
-anthropic>=0.18.0              # Anthropic Claude (optional)
-google-generativeai>=0.3.0     # Google Gemini/Med-PaLM (optional)
+# Web & API
+streamlit==1.38.0
+flask==3.0.0
+requests==2.32.5
+urllib3==2.2.2
 
-# ============================================================================
-# Data Processing
-# ============================================================================
-pandas==2.2.2                  # Data manipulation
-numpy==1.26.4                  # Numerical computing
-requests==2.32.5               # HTTP library
+# Security & Cryptography
+ecdsa==0.18.0
+cryptography==43.0.1
+pyjwt==2.8.0
 
-# ============================================================================
-# Authentication & Security
-# ============================================================================
-pyjwt==2.8.0                   # JWT authentication
-cryptography==43.0.1           # Encryption for audit logs
-
-# ============================================================================
-# Data Validation
-# ============================================================================
-pydantic==2.8.2                # Data validation
-
-# ============================================================================
 # Utilities
-# ============================================================================
-tqdm==4.66.5                   # Progress bars
-python-dotenv==1.0.1           # Environment variables
-urllib3==2.2.2                 # HTTP client
-
-# ============================================================================
-# Advanced Features (v2.5+)
-# ============================================================================
-# crewai                     # Multi-agent orchestration (Optional)
-# crewai-tools               # Tools for agents (Optional)
-# monai==1.3.0               # Medical imaging AI (Optional)
-# pydicom==2.4.4             # DICOM handling (Optional)
-# matplotlib==3.8.2          # Plotting/Heatmaps
-# Pillow==10.2.0             # Image processing
-# xgboost==2.0.3             # Gradient boosting (Lab predictions)
-# scikit-learn==1.4.0        # ML utilities
-# scispacy                   # Biomedical NLP (Optional)
-# spacy                      # Core NLP framework (Optional)
-# neo4j==5.16.0              # Graph database driver (Optional)
-# playwright==1.41.0         # Web RPA (Optional)
-# pyautogui==0.9.54          # Desktop RPA (Optional)
-# watchdog==3.0.0            # File system monitoring
-# websockets==12.0           # WebSocket server
-# faster-whisper==1.0.3      # Local speech-to-text for mobile
-faiss-cpu==1.8.0           # Vector similarity search
-flask==3.0.0               # Web framework (optional)
-
-
+numpy==1.26.4
+pandas==2.2.2
+pydantic==2.8.2
+python-dotenv==1.0.1
+tqdm==4.66.5
 

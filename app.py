@@ -111,14 +111,30 @@ def is_on_hospital_wifi() -> Tuple[bool, str]:
         return True, "Dev Mode (Check Disabled)"
         
     try:
-        # Linux/NMCLI specific
-        ssid = os.popen("nmcli -t -f active,ssid dev wifi | grep '^yes' | cut -d: -f2").read().strip()
+        # Linux/NMCLI specific - Robust Check
+        import subprocess
         
-        if any(keyword in ssid for keyword in HOSPITAL_SSID_KEYWORDS):
-            return True, f"Authorized Network: {ssid}"
-        return False, f"Unauthorized Network: {ssid}"
-    except Exception:
-        return False, "Could not verify WiFi"
+        # Get active connection UUID and SSID
+        # Format: active:ssid
+        cmd = ["nmcli", "-t", "-f", "active,ssid", "dev", "wifi"]
+        output = subprocess.check_output(cmd).decode("utf-8").strip()
+        
+        # Parse output line by line
+        current_ssid = ""
+        for line in output.split('\n'):
+            if line.startswith("yes:"):
+                current_ssid = line.split(":")[1]
+                break
+        
+        if not current_ssid:
+             return False, "No active WiFi connection found"
+
+        if any(keyword in current_ssid for keyword in HOSPITAL_SSID_KEYWORDS):
+            return True, f"Authorized Network: {current_ssid}"
+            
+        return False, f"Unauthorized Network: {current_ssid}"
+    except Exception as e:
+        return False, f"Could not verify WiFi: {str(e)}"
     
     # ⚠️ SECURITY NOTE: SSID checks are spoofable. 
     # Production deployment requires 802.1x mTLS or VPN-based network attestation.

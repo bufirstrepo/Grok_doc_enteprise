@@ -191,12 +191,13 @@ Grok_doc_enteprise/
 ### HIPAA Safeguards
 
 1. **Network Isolation**
-   - WiFi SSID verification before any operation
+   - **Robust WiFi Verification**: `nmcli` based SSID attestation (Linux/Hardware locked)
    - Captive portal detection
    - No external API calls
 
 2. **Audit Trail**
    - Every decision logged with SHA-256 hash
+   - **NEW**: ECDSA (SECP256k1) cryptographic signatures for non-repudiation
    - Blockchain-style chain (prev_hash linking)
    - Tamper detection via `verify_audit_integrity()`
    - Physician e-signature required

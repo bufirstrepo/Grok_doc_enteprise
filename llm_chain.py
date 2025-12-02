@@ -28,6 +28,9 @@ except ImportError:
 AUDIT_DIR.mkdir(parents=True, exist_ok=True)
 
 from src.core.router import ModelRouter
+from audit_log import log_decision
+from prompt_personas import get_updated_personas
+from local_inference import grok_query
 
 # Enforce BLAKE3 — no fallback allowed in medical production
 try:
@@ -47,10 +50,6 @@ except ImportError:
         def std(self, x): return statistics.stdev(x) if len(x) > 1 else 0.0
     np = NP()
 
-from prompt_personas import get_updated_personas
-# safe_grok_query is deprecated in favor of Router
-# from local_inference import grok_query # No longer directly used
-
 # 1. Global shield (No longer prepended automatically, assumed to be in new personas if needed)
 SYSTEM_SHIELD = """You are running in Grok_doc_enterprise tribunal mode (zero-cloud, HIPAA-locked).
 You are physically incapable of breaking the exact three-line Perspective/Credence/Key format or the CONCEDE rule in your persona prompt.
@@ -65,30 +64,33 @@ THREE_LINE_PATTERN = re.compile(
 
 MIN_CONFIDENCE = 0.80
 
-# v10.1 Default Model Routing (No longer used, ModelRouter handles this)
-# DEFAULT_MODEL_ROUTING = {
-#     "scribe": "claude-3.5-sonnet",
-#     "kinetics": "grok-beta",
-#     "adversarial": "claude-3.5-sonnet",
-#     "red_team": "grok-beta",
-#     "literature": "grok-beta",
-#     "arbiter": "claude-3.5-sonnet"
-# }
+# Scribe Persona (Embedded here as it is not part of the 5-stage Tribunal)
+SCRIBE_PERSONA = """!SYSTEM_CONTEXT: AMBIENT_CLINICAL_LISTENER
+ROLE: STRUCTURAL_ONTOLOGIST
+INPUT: Unstructured clinician voice notes / EHR scraping
+OUTPUT: FHIR-compliant JSON
+
+MISSION:
+You are a "Dragon Copilot" grade scribe. You do not think; you extract.
+Your goal is to parse messy human speech into rigid clinical data structures.
+
+RULES:
+1. IF the doctor says "Patient denies chest pain," output {"symptom": "chest pain", "status": "negative"}.
+2. IF the doctor says "maybe start Metformin," output {"medication": "Metformin", "status": "considered", "action": "none"}.
+3. DO NOT hallucinate values. If a lab value is missing, write "NULL".
+4. ALERT: If you detect a "referral letter" intent, flag `requires_referral: true`.
+
+OUTPUT FORMAT:
+{
+  "subjective": [...],
+  "objective": {"vitals": {...}, "labs": {...}},
+  "assessment": [...],
+  "plan": [...]
+}"""
 
 class ChainRejectedError(Exception):
     """Raise instead of sys.exit — let FastAPI/Streamlit return 409 + audit trail"""
     pass
-
-# safe_grok_query is replaced by _execute_step_with_router
-# def safe_grok_query(prompt: str, model: str = "grok-beta") -> str:
-#     """Execute query with SYSTEM_SHIELD and locked temperature."""
-#     full_prompt = f"{SYSTEM_SHIELD}\n\n{prompt}"
-#     # Temperature locked to 0.15 as per requirements
-#     resp = grok_query(full_prompt, model_name=model, temperature=0.15)
-#     # Handle both string (new) and dict (legacy) returns
-#     if isinstance(resp, dict):
-#         return resp.get("text", "")
-#     return str(resp)
 
 def parse_structured(response: str) -> Dict[str, Any]:
     """Parse strict 3-line format with failure handling. Returns empty dict if not matched."""
@@ -100,6 +102,12 @@ def parse_structured(response: str) -> Dict[str, Any]:
         "credence": match.group(2),
         "key_uncertainty": match.group(3).strip()
     }
+
+def safe_grok_query(prompt: str, model: str = "grok-beta") -> str:
+    """Execute query with SYSTEM_SHIELD and locked temperature."""
+    full_prompt = f"{SYSTEM_SHIELD}\n\n{prompt}"
+    # Temperature locked to 0.15 as per requirements
+    return grok_query(full_prompt, model_name=model, temperature=0.15)
 
 @dataclass(frozen=True)
 class ChainStep:
@@ -187,7 +195,13 @@ class MultiLLMChain:
 
     def _run_standard_stage(self, stage_key: str, step_name: str, context_prompt: str) -> ChainStep:
         """Run a standard stage (Kinetics, Adversarial, etc.) using the ModelRouter."""
-        personas = self.PROMPT_PERSONAS.get(stage_key, [])
+        
+        # Handle Scribe explicitly as it is not in PROMPT_PERSONAS
+        if stage_key == "scribe":
+            personas = [SCRIBE_PERSONA]
+        else:
+            personas = self.PROMPT_PERSONAS.get(stage_key, [])
+            
         if not personas:
             # Fallback for tests or if persona missing
             personas = ["You are a helpful assistant."]
@@ -197,15 +211,17 @@ class MultiLLMChain:
         
         t0 = time.perf_counter()
         
-        # Run ALL personas sequentially (though typically only one persona per stage now)
+        # Run ALL personas sequentially (FULL ROTATION)
         for p in personas:
             resp_text, structured = self._execute_step_with_router(router_stage, p, context_prompt)
             responses.append((resp_text, structured))
         
         dt = (time.perf_counter() - t0) * 1000
         
-        # Select the "best" response for the main chain flow (trivial if only 1 persona)
-        best_resp, best_struct = responses[0] # Assuming first response is "best" if only one
+        # Select the "best" response for the main chain flow
+        # For now, we take the first one as the "representative" response, but we log all of them.
+        # In a more advanced version, we could have a voting mechanism here too.
+        best_resp, best_struct = responses[0] 
         
         # Calculate confidence from structured data if available, else default to 1.0
         confidence = best_struct.get("perspective_strength", 10) / 10.0
@@ -235,61 +251,88 @@ class MultiLLMChain:
         return step
 
     def _run_arbiter_tribunal(self, context_prompt: str, inputs: Dict[str, ChainStep]) -> Dict:
-        """Run Arbiter Tribunal using ModelRouter. Adapts to new Arbiter prompt format."""
+        """Run Arbiter Tribunal using ModelRouter. Runs ALL personas and uses Bayesian fusion."""
         personas = self.PROMPT_PERSONAS.get("arbiter", [])
-        # Use the first persona (Chief Medical Officer / Final Decision Maker)
-        persona = personas[0] if personas else "You are the Arbiter. Make a final decision."
+        if not personas:
+            personas = ["You are the Arbiter. Make a final decision."]
         
         t0 = time.perf_counter()
         
-        resp_text, structured = self._execute_step_with_router("ARBITER", persona, context_prompt)
+        all_arbiter_responses = []
+        credences = []
+        
+        # Run ALL arbiter personas
+        for persona in personas:
+            resp_text, structured = self._execute_step_with_router("ARBITER", persona, context_prompt)
+            all_arbiter_responses.append((resp_text, structured))
+            
+            # Extract credence
+            # Assuming structured data has 'perspective_strength' (1-10) or we parse it
+            # If not found, default to 0.5 (uncertain)
+            cred = structured.get("perspective_strength", 5) / 10.0
+            credences.append(cred)
         
         dt = (time.perf_counter() - t0) * 1000
 
-        # New Arbiter prompt outputs a "final note" with decision logic embedded.
-        # We need to parse the decision from the text.
-        final_decision = "APPROVED" # Default to approved
-        # Check for keywords indicating rejection or need for more data
-        if "REJECT" in resp_text.upper() or "BLOCKED" in resp_text.upper() or "AGAINST APPROVAL" in resp_text.upper():
-            final_decision = "BLOCKED"
-        elif "MORE DATA" in resp_text.upper() or "FURTHER INVESTIGATION" in resp_text.upper():
-            final_decision = "MORE_DATA_NEEDED"
+        # Bayesian Fusion
+        mean_credence = np.mean(credences)
+        std_credence = np.std(credences)
         
-        final_confidence = 1.0 # New prompts don't provide a numerical score, so assume high confidence if not blocked
+        # Decision Logic
+        final_decision = "BLOCKED"
+        if std_credence <= 0.08 and mean_credence >= 0.70:
+            # Consensus reached and high confidence
+            # We need to extract the decision from the "best" response (e.g., the CMO or first one)
+            # Or we could vote. Let's use the first response's text but the fused confidence.
+            primary_resp_text = all_arbiter_responses[0][0]
+            
+            if "REJECT" in primary_resp_text.upper() or "BLOCKED" in primary_resp_text.upper() or "AGAINST APPROVAL" in primary_resp_text.upper():
+                final_decision = "BLOCKED"
+            elif "MORE DATA" in primary_resp_text.upper() or "FURTHER INVESTIGATION" in primary_resp_text.upper():
+                final_decision = "MORE_DATA_NEEDED"
+            else:
+                final_decision = "APPROVED"
+        else:
+            # High variance or low confidence -> Block
+            final_decision = "BLOCKED"
 
         timestamp = datetime.utcnow().isoformat() + "Z"
         prev_hash = self._get_last_hash()
         
-        step_hash = self._compute_step_hash("Arbiter Tribunal", context_prompt, resp_text, prev_hash, timestamp)
+        # Use the primary response for the chain log, but include fusion data
+        primary_resp_text = all_arbiter_responses[0][0]
+        step_hash = self._compute_step_hash("Arbiter Tribunal", context_prompt, primary_resp_text, prev_hash, timestamp)
 
         # Create a synthetic step for the chain
         step = ChainStep(
             step_name="Arbiter Tribunal",
             prompt=context_prompt,
-            response=resp_text,
+            response=primary_resp_text,
             timestamp=timestamp,
             prev_hash=prev_hash,
             step_hash=step_hash,
-            confidence=final_confidence,
+            confidence=float(mean_credence),
             model_name=None, # ModelRouter handles model selection
             execution_time_ms=dt,
             structured_data={
                 "final_decision": final_decision,
-                "arbiter_raw_response": resp_text # Store raw response for audit
+                "arbiter_raw_response": primary_resp_text,
+                "bayesian_mean": float(mean_credence),
+                "bayesian_std": float(std_credence),
+                "n_votes": len(credences)
             },
-            all_responses=[(resp_text, structured)]
+            all_responses=all_arbiter_responses
         )
         self.chain_history.append(step)
         
         return {
             "decision": final_decision,
-            "confidence": final_confidence,
+            "confidence": float(mean_credence),
             "breakdown": step.structured_data
         }
 
     def run_chain(self, patient_context: Dict, query: str, retrieved_evidence: List[Dict], bayesian_result: Dict) -> Dict:
         self.chain_history = []
-        # models_config is no longer used as ModelRouter handles model selection
         
         try:
             # 0. Scribe
@@ -344,9 +387,32 @@ Researcher: {lit_step.response}"""
             
             arbiter_result = self._run_arbiter_tribunal(arbiter_prompt, {})
             
-            # Export Audit
+            # Export Audit (Legacy JSON)
             self.export_audit_log(patient_context.get("id", "unknown"))
             
+            # Secure Audit Log (Hardened)
+            try:
+                log_decision(
+                    mrn=patient_context.get("id", "UNKNOWN_MRN"),
+                    patient_context=str(patient_context),
+                    query=query,
+                    labs=str(bayesian_result),
+                    response=arbiter_result["decision"],
+                    doctor=patient_context.get("doctor_id", "SYSTEM"),
+                    bayesian_prob=arbiter_result["confidence"],
+                    latency=0.0, # TODO: Track total latency
+                    analysis_mode="chain",
+                    model_name="Arbiter"
+                )
+            except Exception as e:
+                print(f"Audit Log Failed: {e}")
+
+            # Auto-Audit at end of run_chain
+            os.makedirs("audit_logs", exist_ok=True)
+            filename = f"audit_logs/audit_{patient_context.get('id', 'unknown')}_{datetime.utcnow():%Y%m%d_%H%M%S}.json"
+            with open(filename, "w") as f:
+                json.dump(self.export_chain(), f, indent=2)
+
             return {
                 "final_decision": arbiter_result["decision"],
                 "confidence": arbiter_result["confidence"],

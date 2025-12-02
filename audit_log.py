@@ -6,12 +6,13 @@ from pathlib import Path
 from typing import Dict, Optional
 import os
 from cryptography.fernet import Fernet
+from ecdsa import SigningKey, VerifyingKey, SECP256k1
 
 DB_PATH = "audit.db"
 CHAIN_FILE = "audit_chain.jsonl"
 KEY_FILE = "audit.key"
 
-# ── ENCRYPTION HELPERS ───────────────────────────────────────────
+# ── ENCRYPTION & SIGNING HELPERS ──────────────────────────────────
 
 def get_key() -> bytes:
     """Load or generate encryption key."""
@@ -27,6 +28,23 @@ def get_key() -> bytes:
         return key
 
 _CIPHER = Fernet(get_key())
+
+# ECDSA Signing Key
+SIGNING_KEY_FILE = "audit_signing.pem"
+
+def get_signing_key() -> SigningKey:
+    """Load or generate ECDSA signing key."""
+    if os.path.exists(SIGNING_KEY_FILE):
+        with open(SIGNING_KEY_FILE, "rb") as f:
+            return SigningKey.from_pem(f.read())
+    else:
+        sk = SigningKey.generate(curve=SECP256k1)
+        with open(SIGNING_KEY_FILE, "wb") as f:
+            f.write(sk.to_pem())
+        os.chmod(SIGNING_KEY_FILE, 0o600)
+        return sk
+
+_SIGNING_KEY = get_signing_key()
 
 def encrypt(data: str) -> str:
     """Encrypt string data."""
@@ -62,6 +80,7 @@ def init_db():
             model_name TEXT,
             prev_hash TEXT NOT NULL,
             entry_hash TEXT NOT NULL,
+            signature TEXT,
             UNIQUE(entry_hash)
         )
     """)
@@ -166,6 +185,10 @@ def log_decision(
     # Compute hash on encrypted data
     entry_hash = compute_entry_hash(entry)
     entry["hash"] = entry_hash
+    
+    # Sign the hash
+    signature = _SIGNING_KEY.sign(entry_hash.encode()).hex()
+    entry["signature"] = signature
 
     # Write to SQLite
     conn = sqlite3.connect(DB_PATH)
@@ -173,12 +196,13 @@ def log_decision(
         conn.execute("""
             INSERT INTO decisions
             (timestamp, mrn, patient_context, doctor, question, labs, answer,
-             bayesian_prob, latency, analysis_mode, model_name, prev_hash, entry_hash)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             bayesian_prob, latency, analysis_mode, model_name, prev_hash, entry_hash, signature)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             timestamp, enc_mrn, enc_context, enc_doctor, enc_query, enc_labs, enc_response,
-            bayesian_prob, latency, analysis_mode, model_name, prev_hash, entry_hash
+            bayesian_prob, latency, analysis_mode, model_name, prev_hash, entry_hash, signature
         ))
+
         conn.commit()
     except sqlite3.IntegrityError as e:
         conn.close()
