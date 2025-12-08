@@ -7,7 +7,7 @@ sentence-transformers==3.0.0
 faiss-cpu==1.8.0
 
 # Web & API
-streamlit==1.38.0
+streamlit==1.52.1
 flask==3.0.0
 requests==2.32.5
 urllib3==2.2.2
