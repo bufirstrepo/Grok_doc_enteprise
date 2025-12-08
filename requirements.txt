@@ -14,7 +14,7 @@ urllib3==2.2.2
 
 # Security & Cryptography
 ecdsa==0.18.0
-cryptography==43.0.1
+cryptography==46.0.3
 pyjwt==2.8.0
 
 # Utilities
