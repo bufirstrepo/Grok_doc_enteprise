@@ -22,5 +22,5 @@ numpy==1.26.4
 pandas==2.2.2
 pydantic==2.8.2
 python-dotenv==1.0.1
-tqdm==4.66.5
+tqdm==4.67.1
 
